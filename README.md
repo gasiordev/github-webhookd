@@ -43,3 +43,9 @@ commands that might be useful:
 
 * `make fmt` will use `gofmt` to reformat the code;
 * `make fmtcheck` will use `gofmt` to check the code intending.
+
+## TODO
+The following features are planned:
+* list of Jenkins URL's to be triggered as a list in configuration file instead
+of them being hardcoded;
+* each Jenkins URL to have number of retries, required response HTTP status etc.
