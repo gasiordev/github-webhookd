@@ -46,6 +46,6 @@ commands that might be useful:
 
 ## TODO
 The following features are planned:
-* list of Jenkins URL's to be triggered as a list in configuration file instead
-of them being hardcoded;
+* list of Jenkins URL's that are triggered as a list in configuration file
+instead of being hardcoded;
 * each Jenkins URL to have number of retries, required response HTTP status etc.
