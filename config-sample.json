@@ -1,0 +1,7 @@
+{
+  "version": "1",
+  "port": "32222",
+  "jenkins_user": "USER",
+  "jenkins_token": "TOKEN",
+  "jenkins_url": "http://jenkins.url"
+}
