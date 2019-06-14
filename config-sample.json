@@ -1,7 +1,39 @@
 {
   "version": "1",
   "port": "32222",
-  "jenkins_user": "USER",
-  "jenkins_token": "TOKEN",
-  "jenkins_url": "http://jenkins.url"
+  "jenkins": {
+    "user": "USER",
+    "token": "TOKEN",
+    "base_url": "https://jenkins.url",
+    "endpoints": [
+      {
+        "id": "multibranch_pipeline_scan",
+        "path": "/job/{{.repository}}_multibranch/build",
+        "retry": {
+          "delay": "5",
+          "count": "3"
+        },
+        "success": {
+          "http_status": "201"
+        }
+      },
+      {
+        "id": "multibranch_pipeline_branch",
+        "path": "/job/{{.repository}}_multibranch/job/{{.branch}}/build",
+        "retry": {
+          "delay": "5",
+          "count": "20"
+        },
+        "success": {
+          "http_status": "201"
+        }
+      }
+    ]
+  },
+  "endpoints_to_trigger": {
+    "jenkins": [
+      "multibranch_pipeline_scan",
+      "multibranch_pipeline_branch"
+    ]
+  }
 }
