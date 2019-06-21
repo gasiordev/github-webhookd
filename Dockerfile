@@ -1,13 +1,17 @@
-# Docker image contains source code and binaries.
-FROM golang:alpine
+FROM golang:alpine AS builder
 LABEL maintainer="Nicholas Gasior <nicholas@laatu.org>"
 
 RUN apk add --update git bash openssh make
 
-WORKDIR $GOPATH/src/github.com/nicholasgasior/buildtrigger
+WORKDIR /go/src/github.com/nicholasgasior/buildtrigger
 COPY . .
 RUN make tools
 RUN make build
 
-WORKDIR $GOPATH
-ENTRYPOINT ["bin/linux/buildtrigger"]
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /bin
+COPY --from=builder /go/bin/linux/buildtrigger .
+
+ENTRYPOINT ["/bin/buildtrigger"]
