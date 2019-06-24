@@ -78,8 +78,22 @@ func (trig *BuildTrigger) getJenkinsEndpointRetryDelay(e *JenkinsEndpoint) (int,
 	return rd, nil
 }
 
-func (trig *BuildTrigger) processJenkinsEndpoint(e string, repo string, branch string) error {
-	endp := trig.config.Jenkins.EndpointsMap[e]
+func (trig *BuildTrigger) processJenkinsEndpoint(t *JenkinsTrigger, j map[string]interface{}) error {
+	if !(j["pusher"] != nil && j["ref"] != nil && j["repository"] != nil && j["repository"].(map[string]interface{})["name"] != nil) {
+		return nil
+	}
+
+	log.Print(j)
+
+	repo := j["repository"].(map[string]interface{})["name"].(string)
+	ref := strings.Split(j["ref"].(string), "/")
+	branch := ref[2]
+
+	if ref[1] == "tag" {
+		return nil
+	}
+
+	endp := trig.config.Jenkins.EndpointsMap[t.Endpoint]
 	if endp == nil {
 		return nil
 	}
@@ -187,28 +201,20 @@ func (trig *BuildTrigger) processJenkinsEndpointRetries(endpointDef *JenkinsEndp
 func (trig *BuildTrigger) ProcessGitHubPayload(b *([]byte)) error {
 	j := make(map[string]interface{})
 	err := json.Unmarshal(*b, &j)
-	if err == nil {
-		if j["pusher"] != nil && j["ref"] != nil && j["repository"] != nil && j["repository"].(map[string]interface{})["name"] != nil {
-			ref := strings.Split(j["ref"].(string), "/")
-			if ref[1] != "tag" {
-				log.Print("Got payload from GitHub to process")
-
-				if trig.config.EndpointsToTrigger.Jenkins != nil {
-					for _, e := range trig.config.EndpointsToTrigger.Jenkins {
-						err := trig.processJenkinsEndpoint(e, j["repository"].(map[string]interface{})["name"].(string), ref[2])
-						if err != nil {
-							log.Print("Error processing endpoint " + e + ". Breaking.")
-							break
-						}
-					}
-				}
-
-				return nil
-			}
-		}
-	} else {
+	if err != nil {
 		return errors.New("Got non-JSON payload")
 	}
+
+	if trig.config.Triggers.Jenkins != nil {
+		for _, t := range trig.config.Triggers.Jenkins {
+			err := trig.processJenkinsEndpoint(&t, j)
+			if err != nil {
+				log.Print("Error processing endpoint " + t.Endpoint + ". Breaking.")
+				break
+			}
+		}
+	}
+
 	return nil
 }
 
