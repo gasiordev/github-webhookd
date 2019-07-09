@@ -1,7 +1,7 @@
 VERSION?=$$(cat version.go | grep VERSION | cut -d"=" -f2 | sed 's/"//g' | sed 's/ //g')
 GOFMT_FILES?=$$(find . -name '*.go')
-PROJECT_BIN?=buildtrigger
-PROJECT_SRC?=github.com/mikolajgasior/buildtrigger
+PROJECT_BIN?=github-webhookd
+PROJECT_SRC?=github.com/gen64/github-webhookd
 
 default: build
 

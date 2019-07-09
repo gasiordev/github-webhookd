@@ -1,16 +1,16 @@
-# buildtrigger
+# github-webhookd
 Tiny API that triggers Jenkins builds from GitHub Webhook
 
 ## CLI
 The following CLI commands are available:
 ```
-buildtrigger start --config=PATH_TO_CONFIG_FILE
+github-webhookd start --config=PATH_TO_CONFIG_FILE
 ```
 
 ## Building
 Ensure you have your
 [workspace directory](https://golang.org/doc/code.html#Workspaces) created.
-Change directory to $GOPATH/github.com/mikolajgasior/buildtrigger and run
+Change directory to $GOPATH/github.com/gen64/github-webhookd and run
 the following commands:
 
 ```
@@ -58,7 +58,7 @@ In above example, application will make a `POST` request to
 Execute the binary, eg.
 
 ```
-./buildtrigger start --config=PATH_TO_CONFIG_FILE
+./github-webhookd start --config=PATH_TO_CONFIG_FILE
 ```
 
 ## Development
