@@ -1,12 +1,12 @@
 VERSION?=$$(cat version.go | grep VERSION | cut -d"=" -f2 | sed 's/"//g' | sed 's/ //g')
 GOFMT_FILES?=$$(find . -name '*.go')
 PROJECT_BIN?=buildtrigger
-PROJECT_SRC?=github.com/nicholasgasior/buildtrigger
+PROJECT_SRC?=github.com/mikolajgasior/buildtrigger
 
 default: build
 
 tools:
-	GO111MODULE=off go get -u github.com/nicholasgasior/go-cli
+	GO111MODULE=off go get -u github.com/mikolajgasior/go-cli
 	GO111MODULE=off go get -u github.com/gorilla/mux
 
 guard-%:

@@ -1,9 +1,9 @@
 FROM golang:alpine AS builder
-LABEL maintainer="Nicholas Gasior <nicholas@laatu.org>"
+LABEL maintainer="Mikolaj Gasior <miko@gen64.pl>"
 
 RUN apk add --update git bash openssh make
 
-WORKDIR /go/src/github.com/nicholasgasior/buildtrigger
+WORKDIR /go/src/github.com/mikolajgasior/buildtrigger
 COPY . .
 RUN make tools
 RUN make build
