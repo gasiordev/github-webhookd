@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/nicholasgasior/go-cli"
+	"github.com/mikolajgasior/go-cli"
 	"os"
 )
 
@@ -24,7 +24,7 @@ func getCLIVersionHandler(trig *BuildTrigger) func(*cli.CLI) int {
 }
 
 func NewBuildTriggerCLI(trig *BuildTrigger) *cli.CLI {
-	BuildTriggerCLI := cli.NewCLI("BuildTrigger", "Tiny API that triggers Jenkins buils from GitHub Webhook", "Nicholas Gasior <nicholas@laatu.org>")
+	BuildTriggerCLI := cli.NewCLI("github-webhookd", "Tiny API to receive GitHub Webhooks and trigger Jenkins jobs", "Mikolaj Gasior <miko@gen64.pl>")
 
 	cmdStart := BuildTriggerCLI.AddCmd("start", "Starts API", getCLIStartTriggerHandler(trig))
 	cmdStart.AddFlag("config", "Config file", cli.CLIFlagTypePathFile|cli.CLIFlagMustExist|cli.CLIFlagRequired)
