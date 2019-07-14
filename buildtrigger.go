@@ -78,18 +78,51 @@ func (trig *BuildTrigger) getJenkinsEndpointRetryDelay(e *JenkinsEndpoint) (int,
 	return rd, nil
 }
 
+func (trig *BuildTrigger) getPusher(j map[string]interface{}) string {
+	if j["pusher"] != nil {
+		return j["pusher"].(string)
+	} else {
+		return ""
+	}
+}
+func (trig *BuildTrigger) getRepository(j map[string]interface{}) string {
+	if j["repository"] != nil {
+		if j["repository"].(map[string]interface{})["name"] != nil {
+			return j["repository"].(map[string]interface{})["name"].(string)
+		} else {
+			return ""
+		}
+	} else {
+		return ""
+	}
+}
+func (trig *BuildTrigger) getRef(j map[string]interface{}) string {
+	if j["ref"] != nil {
+		return j["ref"].(string)
+	} else {
+		return ""
+	}
+}
+func (trig *BuildTrigger) getBranch(j map[string]interface{}) string {
+	ref := strings.Split(j["ref"].(string), "/")
+	if ref[1] == "tag" {
+		return ""
+	}
+	branch := ref[2]
+	return branch
+}
+
 func (trig *BuildTrigger) processJenkinsEndpoint(t *JenkinsTrigger, j map[string]interface{}) error {
-	if !(j["pusher"] != nil && j["ref"] != nil && j["repository"] != nil && j["repository"].(map[string]interface{})["name"] != nil) {
+	pusher := trig.getPusher(j)
+	repo := trig.getRepository(j)
+	ref := trig.getRef(j)
+	if pusher == "" && repo == "" && ref == "" {
 		return nil
 	}
 
 	log.Print(j)
-
-	repo := j["repository"].(map[string]interface{})["name"].(string)
-	ref := strings.Split(j["ref"].(string), "/")
-	branch := ref[2]
-
-	if ref[1] == "tag" {
+	branch := trig.getBranch(j)
+	if branch == "" {
 		return nil
 	}
 
