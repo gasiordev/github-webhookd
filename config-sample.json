@@ -37,14 +37,12 @@
         "events": {
           "push": {
             "repositories": [
-              {
-                "name": "caramel", "branches": ["new-registry-etc"]
-              }
+              { "name": "repo1", "branches": ["branch1", "branch2"] },
+              { "name": "repo2" }
             ],
             "branches": [
-              {
-                "name": "new-registry-etc", "repositories": ["caramel"]
-              }
+              { "name": "branch3", "repositories": ["repo3"] },
+              { "name": "branch4" }
             ]
           }
         }
@@ -54,14 +52,12 @@
         "events": {
           "push": {
             "repositories": [
-              {
-                "name": "caramel", "branches": ["new-registry-etc"]
-              }
+              { "name": "repo1", "branches": ["branch1", "branch2"] },
+              { "name": "repo2" }
             ],
             "branches": [
-              {
-                "name": "new-registry-etc", "repositories": ["caramel"]
-              }
+              { "name": "branch3", "repositories": ["repo3"] },
+              { "name": "branch4" }
             ]
           }
         }
