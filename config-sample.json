@@ -34,22 +34,36 @@
     "jenkins": [
       {
         "endpoint": "multibranch_pipeline_scan",
-        "conditions": {
-          "push": true
+        "events": {
+          "push": {
+            "repositories": [
+              {
+                "name": "caramel", "branches": ["new-registry-etc"]
+              }
+            ],
+            "branches": [
+              {
+                "name": "new-registry-etc", "repositories": ["caramel"]
+              }
+            ]
+          }
         }
       },
       {
         "endpoint": "multibranch_pipeline_branch",
-        "conditions": {
-          "push": true,
-          "repositories": [
-            { "name": "repo1" },
-            { "name": "repo2", "branches": ["branch1", "branch2"] }
-          ],
-          "branches": [
-            { "name": "master" },
-            { "name": "branch1", "repositories": ["repo1", "repo2"] }
-          ]
+        "events": {
+          "push": {
+            "repositories": [
+              {
+                "name": "caramel", "branches": ["new-registry-etc"]
+              }
+            ],
+            "branches": [
+              {
+                "name": "new-registry-etc", "repositories": ["caramel"]
+              }
+            ]
+          }
         }
       }
     ]

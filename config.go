@@ -42,25 +42,27 @@ type Trigger struct {
 }
 
 type JenkinsTrigger struct {
-	Endpoint   string             `json:"endpoint"`
-	Conditions EndpointConditions `json:"condition"`
+	Endpoint string `json:"endpoint"`
+	Events   Events `json:"events"`
+}
+
+type Events struct {
+	Push *EndpointConditions `json:"push"`
 }
 
 type EndpointConditions struct {
-	Push         bool                          `json:"push"`
-	Repositories []EndpointConditionRepository `json:"repositories"`
-	Branches     []EndpointConditionBranch     `json:"branches"`
-	PullRequest  bool                          `json:"pull_request"`
+	Repositories *([]EndpointConditionRepository) `json:"repositories"`
+	Branches     *([]EndpointConditionBranch)     `json:"branches"`
 }
 
 type EndpointConditionRepository struct {
 	Name     string   `json:"name"`
-	Branches []string `json:"branches"`
+	Branches *([]string) `json:"branches"`
 }
 
 type EndpointConditionBranch struct {
 	Name         string   `json:"name"`
-	Repositories []string `json:"repositories"`
+	Repositories *([]string) `json:"repositories"`
 }
 
 func (c *Config) SetFromJSON(b []byte) {
