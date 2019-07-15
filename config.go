@@ -56,12 +56,12 @@ type EndpointConditions struct {
 }
 
 type EndpointConditionRepository struct {
-	Name     string   `json:"name"`
+	Name     string      `json:"name"`
 	Branches *([]string) `json:"branches"`
 }
 
 type EndpointConditionBranch struct {
-	Name         string   `json:"name"`
+	Name         string      `json:"name"`
 	Repositories *([]string) `json:"repositories"`
 }
 

@@ -78,13 +78,6 @@ func (trig *BuildTrigger) getJenkinsEndpointRetryDelay(e *JenkinsEndpoint) (int,
 	return rd, nil
 }
 
-func (trig *BuildTrigger) getPusher(j map[string]interface{}) string {
-	if j["pusher"] != nil {
-		return j["pusher"].(string)
-	} else {
-		return ""
-	}
-}
 func (trig *BuildTrigger) getRepository(j map[string]interface{}) string {
 	if j["repository"] != nil {
 		if j["repository"].(map[string]interface{})["name"] != nil {
@@ -121,7 +114,7 @@ func (trig *BuildTrigger) checkEndpointEvent(t *JenkinsTrigger, j map[string]int
 				for _, r := range *(t.Events.Push.Repositories) {
 					if r.Name == repo {
 						if r.Branches == nil || len(*(r.Branches)) == 0 {
-							log.Print("Found "+ r.Name + " repo")
+							log.Print("Found " + r.Name + " repo")
 							return nil
 						} else {
 							for _, b := range *(r.Branches) {
@@ -158,10 +151,9 @@ func (trig *BuildTrigger) checkEndpointEvent(t *JenkinsTrigger, j map[string]int
 }
 
 func (trig *BuildTrigger) processJenkinsEndpoint(t *JenkinsTrigger, j map[string]interface{}, event string) error {
-	pusher := trig.getPusher(j)
 	repo := trig.getRepository(j)
 	ref := trig.getRef(j)
-	if pusher == "" && repo == "" && ref == "" {
+	if repo == "" && ref == "" {
 		return nil
 	}
 
