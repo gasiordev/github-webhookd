@@ -14,7 +14,9 @@ func getAPIGitHubWebhookPostHandler(trig *BuildTrigger) http.HandlerFunc {
 			return
 		}
 
-		err = trig.ProcessGitHubPayload(&b)
+		event := r.Header.Get("X-GitHub-Event")
+
+		err = trig.ProcessGitHubPayload(&b, event)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return

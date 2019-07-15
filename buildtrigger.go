@@ -78,9 +78,106 @@ func (trig *BuildTrigger) getJenkinsEndpointRetryDelay(e *JenkinsEndpoint) (int,
 	return rd, nil
 }
 
-func (trig *BuildTrigger) processJenkinsEndpoint(e string, repo string, branch string) error {
-	endp := trig.config.Jenkins.EndpointsMap[e]
+func (trig *BuildTrigger) getPusher(j map[string]interface{}) string {
+	if j["pusher"] != nil {
+		return j["pusher"].(string)
+	} else {
+		return ""
+	}
+}
+func (trig *BuildTrigger) getRepository(j map[string]interface{}) string {
+	if j["repository"] != nil {
+		if j["repository"].(map[string]interface{})["name"] != nil {
+			return j["repository"].(map[string]interface{})["name"].(string)
+		} else {
+			return ""
+		}
+	} else {
+		return ""
+	}
+}
+func (trig *BuildTrigger) getRef(j map[string]interface{}) string {
+	if j["ref"] != nil {
+		return j["ref"].(string)
+	} else {
+		return ""
+	}
+}
+func (trig *BuildTrigger) getBranch(j map[string]interface{}) string {
+	ref := strings.Split(j["ref"].(string), "/")
+	if ref[1] == "tag" {
+		return ""
+	}
+	branch := ref[2]
+	return branch
+}
+func (trig *BuildTrigger) checkEndpointEvent(t *JenkinsTrigger, j map[string]interface{}, event string) error {
+	repo := trig.getRepository(j)
+	branch := trig.getBranch(j)
+
+	if t.Events.Push != nil && event == "push" {
+		if t.Events.Push != nil {
+			if t.Events.Push.Repositories != nil {
+				for _, r := range *(t.Events.Push.Repositories) {
+					if r.Name == repo {
+						if r.Branches == nil || len(*(r.Branches)) == 0 {
+							log.Print("Found "+ r.Name + " repo")
+							return nil
+						} else {
+							for _, b := range *(r.Branches) {
+								if b == branch {
+									log.Print("Found " + b + " branch in " + r.Name + " repo in event " + event)
+									return nil
+								}
+							}
+						}
+					}
+				}
+			}
+			if t.Events.Push.Branches != nil {
+				for _, b := range *(t.Events.Push.Branches) {
+					if b.Name == branch {
+						if b.Repositories == nil || len(*(b.Repositories)) == 0 {
+							log.Print("Found " + b.Name + " branch")
+							return nil
+						} else {
+							for _, r := range *(b.Repositories) {
+								if r == repo {
+									log.Print("Found " + r + " repository in " + b.Name + " branch in event " + event)
+									return nil
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return errors.New("Event " + event + "not supported")
+}
+
+func (trig *BuildTrigger) processJenkinsEndpoint(t *JenkinsTrigger, j map[string]interface{}, event string) error {
+	pusher := trig.getPusher(j)
+	repo := trig.getRepository(j)
+	ref := trig.getRef(j)
+	if pusher == "" && repo == "" && ref == "" {
+		return nil
+	}
+
+	log.Print(j)
+	branch := trig.getBranch(j)
+	if branch == "" {
+		return nil
+	}
+
+	endp := trig.config.Jenkins.EndpointsMap[t.Endpoint]
 	if endp == nil {
+		return nil
+	}
+
+	err := trig.checkEndpointEvent(t, j, event)
+	if err != nil {
 		return nil
 	}
 
@@ -184,34 +281,6 @@ func (trig *BuildTrigger) processJenkinsEndpointRetries(endpointDef *JenkinsEndp
 	return errors.New("Unable to post to endpoint " + endpointDef.Path)
 }
 
-func (trig *BuildTrigger) ProcessGitHubPayload(b *([]byte)) error {
-	j := make(map[string]interface{})
-	err := json.Unmarshal(*b, &j)
-	if err == nil {
-		if j["pusher"] != nil && j["ref"] != nil && j["repository"] != nil && j["repository"].(map[string]interface{})["name"] != nil {
-			ref := strings.Split(j["ref"].(string), "/")
-			if ref[1] != "tag" {
-				log.Print("Got payload from GitHub to process")
-
-				if trig.config.EndpointsToTrigger.Jenkins != nil {
-					for _, e := range trig.config.EndpointsToTrigger.Jenkins {
-						err := trig.processJenkinsEndpoint(e, j["repository"].(map[string]interface{})["name"].(string), ref[2])
-						if err != nil {
-							log.Print("Error processing endpoint " + e + ". Breaking.")
-							break
-						}
-					}
-				}
-
-				return nil
-			}
-		}
-	} else {
-		return errors.New("Got non-JSON payload")
-	}
-	return nil
-}
-
 func (trig *BuildTrigger) getCrumb(user string, token string) (string, error) {
 	req, err := http.NewRequest("GET", trig.config.Jenkins.BaseURL+"/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)", strings.NewReader(""))
 	if err != nil {
@@ -228,4 +297,24 @@ func (trig *BuildTrigger) getCrumb(user string, token string) (string, error) {
 	defer resp.Body.Close()
 	b, _ := ioutil.ReadAll(resp.Body)
 	return strings.Split(string(b), ":")[1], nil
+}
+
+func (trig *BuildTrigger) ProcessGitHubPayload(b *([]byte), event string) error {
+	j := make(map[string]interface{})
+	err := json.Unmarshal(*b, &j)
+	if err != nil {
+		return errors.New("Got non-JSON payload")
+	}
+
+	if trig.config.Triggers.Jenkins != nil {
+		for _, t := range trig.config.Triggers.Jenkins {
+			err := trig.processJenkinsEndpoint(&t, j, event)
+			if err != nil {
+				log.Print("Error processing endpoint " + t.Endpoint + ". Breaking.")
+				break
+			}
+		}
+	}
+
+	return nil
 }

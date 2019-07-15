@@ -54,6 +54,32 @@ replaced with repository and branch names.
 In above example, application will make a `POST` request to
 `base_url`+`path`.
 
+### Trigger conditions
+You can now control what repositories and branches should trigger certain
+jenkins endpoints. In `config-sample.json` file, you can find the following
+block:
+```
+{
+  "endpoint": "multibranch_pipeline_scan",
+  "events": {
+    "push": {
+      "repositories": [
+        { "name": "repo1", "branches": ["branch1", "branch2"] },
+        { "name": "repo2" }
+      ],
+      "branches": [
+        { "name": "branch3", "repositories": ["repo3"] },
+        { "name": "branch4" }
+      ]
+    }
+  }
+}
+```
+Endpoint will be triggered only for `push` GitHub Webhook event and only when
+any entry in `repositories` or `branches` matches. As you can see you can
+define whole repo or repo with certain branches as well as the other way, user
+branch name with optional repository names.
+
 ## Running
 Execute the binary, eg.
 

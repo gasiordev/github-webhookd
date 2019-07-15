@@ -6,10 +6,10 @@ import (
 )
 
 type Config struct {
-	Version            string             `json:"version"`
-	Port               string             `json:"port"`
-	Jenkins            Jenkins            `json:"jenkins"`
-	EndpointsToTrigger EndpointsToTrigger `json:"endpoints_to_trigger"`
+	Version  string  `json:"version"`
+	Port     string  `json:"port"`
+	Jenkins  Jenkins `json:"jenkins"`
+	Triggers Trigger `json:"triggers"`
 }
 
 type Jenkins struct {
@@ -21,10 +21,11 @@ type Jenkins struct {
 }
 
 type JenkinsEndpoint struct {
-	Id      string                 `json:"id"`
-	Path    string                 `json:"path"`
-	Retry   JenkinsEndpointRetry   `json:"retry"`
-	Success JenkinsEndpointSuccess `json:"success"`
+	Id        string                 `json:"id"`
+	Path      string                 `json:"path"`
+	Retry     JenkinsEndpointRetry   `json:"retry"`
+	Success   JenkinsEndpointSuccess `json:"success"`
+	Condition string                 `json:"condition"`
 }
 
 type JenkinsEndpointRetry struct {
@@ -36,8 +37,32 @@ type JenkinsEndpointSuccess struct {
 	HTTPStatus string `json:"http_status"`
 }
 
-type EndpointsToTrigger struct {
-	Jenkins []string `json:"jenkins"`
+type Trigger struct {
+	Jenkins []JenkinsTrigger `json:"jenkins"`
+}
+
+type JenkinsTrigger struct {
+	Endpoint string `json:"endpoint"`
+	Events   Events `json:"events"`
+}
+
+type Events struct {
+	Push *EndpointConditions `json:"push"`
+}
+
+type EndpointConditions struct {
+	Repositories *([]EndpointConditionRepository) `json:"repositories"`
+	Branches     *([]EndpointConditionBranch)     `json:"branches"`
+}
+
+type EndpointConditionRepository struct {
+	Name     string   `json:"name"`
+	Branches *([]string) `json:"branches"`
+}
+
+type EndpointConditionBranch struct {
+	Name         string   `json:"name"`
+	Repositories *([]string) `json:"repositories"`
 }
 
 func (c *Config) SetFromJSON(b []byte) {

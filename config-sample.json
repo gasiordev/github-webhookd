@@ -1,5 +1,5 @@
 {
-  "version": "2",
+  "version": "3",
   "port": "32222",
   "jenkins": {
     "user": "USER",
@@ -30,10 +30,38 @@
       }
     ]
   },
-  "endpoints_to_trigger": {
+  "triggers": {
     "jenkins": [
-      "multibranch_pipeline_scan",
-      "multibranch_pipeline_branch"
+      {
+        "endpoint": "multibranch_pipeline_scan",
+        "events": {
+          "push": {
+            "repositories": [
+              { "name": "repo1", "branches": ["branch1", "branch2"] },
+              { "name": "repo2" }
+            ],
+            "branches": [
+              { "name": "branch3", "repositories": ["repo3"] },
+              { "name": "branch4" }
+            ]
+          }
+        }
+      },
+      {
+        "endpoint": "multibranch_pipeline_branch",
+        "events": {
+          "push": {
+            "repositories": [
+              { "name": "repo1", "branches": ["branch1", "branch2"] },
+              { "name": "repo2" }
+            ],
+            "branches": [
+              { "name": "branch3", "repositories": ["repo3"] },
+              { "name": "branch4" }
+            ]
+          }
+        }
+      }
     ]
   }
 }
