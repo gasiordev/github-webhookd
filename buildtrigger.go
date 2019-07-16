@@ -152,15 +152,20 @@ func (trig *BuildTrigger) checkEndpointEvent(t *JenkinsTrigger, j map[string]int
 			if t.Events.Push.Repositories != nil {
 				inRepos = trig.checkEventRepositories(t.Events.Push.Repositories, repo, branch)
 			}
-			if inRepos {
-				return nil
-			}
-
 			inBranches := false
 			if t.Events.Push.Branches != nil {
 				inBranches = trig.checkEventBranches(t.Events.Push.Branches, branch, repo)
 			}
-			if inBranches {
+			inExcludeRepos := false
+			if t.Events.Push.ExcludeRepositories != nil {
+				inExcludeRepos = trig.checkEventRepositories(t.Events.Push.ExcludeRepositories, repo, branch)
+			}
+			inExcludeBranches := false
+			if t.Events.Push.ExcludeBranches != nil {
+				inExcludeBranches = trig.checkEventBranches(t.Events.Push.ExcludeBranches, branch, repo)
+			}
+
+			if (inRepos || inBranches) && !inExcludeRepos && !inExcludeBranches {
 				return nil
 			}
 		}

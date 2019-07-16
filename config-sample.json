@@ -58,6 +58,12 @@
             "branches": [
               { "name": "branch3", "repositories": ["repo3"] },
               { "name": "branch4" }
+            ],
+            "exclude_repositories": [
+              { "name": "repo4" }
+            ],
+            "exclude_branches": [
+              { "name": "master", "repositories": ["repo7"] }
             ]
           }
         }

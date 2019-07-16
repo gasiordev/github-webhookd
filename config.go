@@ -51,8 +51,10 @@ type Events struct {
 }
 
 type EndpointConditions struct {
-	Repositories *([]EndpointConditionRepository) `json:"repositories"`
-	Branches     *([]EndpointConditionBranch)     `json:"branches"`
+	Repositories        *([]EndpointConditionRepository) `json:"repositories"`
+	Branches            *([]EndpointConditionBranch)     `json:"branches"`
+	ExcludeRepositories *([]EndpointConditionRepository) `json:"exclude_repositories"`
+	ExcludeBranches     *([]EndpointConditionBranch)     `json:"exclude_branches"`
 }
 
 type EndpointConditionRepository struct {
