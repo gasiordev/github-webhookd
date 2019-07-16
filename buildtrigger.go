@@ -104,45 +104,64 @@ func (trig *BuildTrigger) getBranch(j map[string]interface{}) string {
 	branch := ref[2]
 	return branch
 }
+
+func (trig *BuildTrigger) checkEventRepositories(repos *([]EndpointConditionRepository), repo string, branch string) bool {
+	for _, r := range *repos {
+		if r.Name == repo || r.Name == "*" {
+			if r.Branches == nil || len(*(r.Branches)) == 0 {
+				log.Print("Found " + r.Name + " repo")
+				return true
+			} else {
+				for _, b := range *(r.Branches) {
+					if b == branch {
+						log.Print("Found " + b + " branch in " + r.Name + " repo")
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+func (trig *BuildTrigger) checkEventBranches(branches *([]EndpointConditionBranch), branch string, repo string) bool {
+	for _, b := range *branches {
+		if b.Name == branch || b.Name == "*" {
+			if b.Repositories == nil || len(*(b.Repositories)) == 0 {
+				log.Print("Found " + b.Name + " branch")
+				return true
+			} else {
+				for _, r := range *(b.Repositories) {
+					if r == repo {
+						log.Print("Found " + r + " repository in " + b.Name + " branch")
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (trig *BuildTrigger) checkEndpointEvent(t *JenkinsTrigger, j map[string]interface{}, event string) error {
 	repo := trig.getRepository(j)
 	branch := trig.getBranch(j)
 
 	if t.Events.Push != nil && event == "push" {
 		if t.Events.Push != nil {
+			inRepos := false
 			if t.Events.Push.Repositories != nil {
-				for _, r := range *(t.Events.Push.Repositories) {
-					if r.Name == repo {
-						if r.Branches == nil || len(*(r.Branches)) == 0 {
-							log.Print("Found " + r.Name + " repo")
-							return nil
-						} else {
-							for _, b := range *(r.Branches) {
-								if b == branch {
-									log.Print("Found " + b + " branch in " + r.Name + " repo in event " + event)
-									return nil
-								}
-							}
-						}
-					}
-				}
+				inRepos = trig.checkEventRepositories(t.Events.Push.Repositories, repo, branch)
 			}
+			if inRepos {
+				return nil
+			}
+
+			inBranches := false
 			if t.Events.Push.Branches != nil {
-				for _, b := range *(t.Events.Push.Branches) {
-					if b.Name == branch {
-						if b.Repositories == nil || len(*(b.Repositories)) == 0 {
-							log.Print("Found " + b.Name + " branch")
-							return nil
-						} else {
-							for _, r := range *(b.Repositories) {
-								if r == repo {
-									log.Print("Found " + r + " repository in " + b.Name + " branch in event " + event)
-									return nil
-								}
-							}
-						}
-					}
-				}
+				inBranches = trig.checkEventBranches(t.Events.Push.Branches, branch, repo)
+			}
+			if inBranches {
+				return nil
 			}
 		}
 	}

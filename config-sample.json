@@ -37,7 +37,7 @@
         "events": {
           "push": {
             "repositories": [
-              { "name": "repo1", "branches": ["branch1", "branch2"] },
+              { "name": "*", "branches": ["branch1", "branch2"] },
               { "name": "repo2" }
             ],
             "branches": [
