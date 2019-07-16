@@ -6,10 +6,11 @@ import (
 )
 
 type Config struct {
-	Version  string  `json:"version"`
-	Port     string  `json:"port"`
-	Jenkins  Jenkins `json:"jenkins"`
-	Triggers Trigger `json:"triggers"`
+	Version  string       `json:"version"`
+	Port     string       `json:"port"`
+	Jenkins  Jenkins      `json:"jenkins"`
+	Triggers Trigger      `json:"triggers"`
+	Forward  *([]Forward) `json:"forward"`
 }
 
 type Jenkins struct {
@@ -35,6 +36,11 @@ type JenkinsEndpointRetry struct {
 
 type JenkinsEndpointSuccess struct {
 	HTTPStatus string `json:"http_status"`
+}
+
+type Forward struct {
+	URL     string `json:"url"`
+	Headers bool   `json:"headers";omitempty`
 }
 
 type Trigger struct {

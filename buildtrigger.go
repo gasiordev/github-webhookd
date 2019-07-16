@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -331,6 +332,32 @@ func (trig *BuildTrigger) ProcessGitHubPayload(b *([]byte), event string) error 
 			}
 		}
 	}
+	return nil
+}
 
+func (trig *BuildTrigger) ForwardGitHubPayload(b *([]byte), h http.Header) error {
+	githubHeaders := []string{"X-GitHub-Event", "X-Hub-Signature", "X-GitHub-Delivery"}
+	if trig.config.Forward != nil {
+		for _, f := range *(trig.config.Forward) {
+			if f.URL != "" {
+				req, err := http.NewRequest("POST", f.URL, bytes.NewReader(*b))
+				if f.Headers {
+					for _, k := range githubHeaders {
+						if h.Get(k) != "" {
+							req.Header.Add(k, h.Get(k))
+						}
+					}
+				}
+				if err != nil {
+					return err
+				}
+				c := &http.Client{}
+				_, err = c.Do(req)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
 	return nil
 }

@@ -30,6 +30,9 @@
       }
     ]
   },
+  "forward": [
+    { "url": "http://127.0.0.1:31111", "headers": true }
+  ],
   "triggers": {
     "jenkins": [
       {

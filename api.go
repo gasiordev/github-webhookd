@@ -22,6 +22,12 @@ func getAPIGitHubWebhookPostHandler(trig *BuildTrigger) http.HandlerFunc {
 			return
 		}
 
+		err = trig.ForwardGitHubPayload(&b, r.Header)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("content-type", "application/json")
 	}
