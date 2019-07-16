@@ -80,6 +80,19 @@ any entry in `repositories` or `branches` matches. As you can see you can
 define whole repo or repo with certain branches as well as the other way, user
 branch name with optional repository names.
 
+In addition to that you can also use new `exclude_repositories` and
+`exclude_branches` blocks to determine what should be excluded.
+
+### Forward payload
+GitHub payload can be forwarded to another URL once successfully processed.
+To do this, just add the following block in your configuration (in the same
+level as `triggers`):
+```
+"forward": [
+  { "url": "http://127.0.0.1:31111", "headers": true }
+],
+```
+
 ## Running
 Execute the binary, eg.
 
