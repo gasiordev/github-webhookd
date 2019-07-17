@@ -83,6 +83,14 @@ branch name with optional repository names.
 In addition to that you can also use new `exclude_repositories` and
 `exclude_branches` blocks to determine what should be excluded.
 
+Currently two events are available: `push` and `pull_request`. When second is
+used you can add `actions` blocks to determine which actions should trigger, eg.
+```
+    "pull_request": {
+      "actions": ["opened", "reopened", "closed", "labeled", "unlabeled"]
+    }
+```
+
 ### Forward payload
 GitHub payload can be forwarded to another URL once successfully processed.
 To do this, just add the following block in your configuration (in the same

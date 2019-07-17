@@ -53,24 +53,26 @@ type JenkinsTrigger struct {
 }
 
 type Events struct {
-	Push *EndpointConditions `json:"push"`
+	Push        *EndpointConditions `json:"push";omitempty`
+	PullRequest *EndpointConditions `json:"pull_request";omitempty`
 }
 
 type EndpointConditions struct {
-	Repositories        *([]EndpointConditionRepository) `json:"repositories"`
-	Branches            *([]EndpointConditionBranch)     `json:"branches"`
-	ExcludeRepositories *([]EndpointConditionRepository) `json:"exclude_repositories"`
-	ExcludeBranches     *([]EndpointConditionBranch)     `json:"exclude_branches"`
+	Repositories        *([]EndpointConditionRepository) `json:"repositories";omitempty`
+	Branches            *([]EndpointConditionBranch)     `json:"branches";omitempty`
+	ExcludeRepositories *([]EndpointConditionRepository) `json:"exclude_repositories";omitempty`
+	ExcludeBranches     *([]EndpointConditionBranch)     `json:"exclude_branches";omitempty`
+	Actions             *([]string)                      `json:"actions";omitempty`
 }
 
 type EndpointConditionRepository struct {
 	Name     string      `json:"name"`
-	Branches *([]string) `json:"branches"`
+	Branches *([]string) `json:"branches";omitempty`
 }
 
 type EndpointConditionBranch struct {
 	Name         string      `json:"name"`
-	Repositories *([]string) `json:"repositories"`
+	Repositories *([]string) `json:"repositories";omitempty`
 }
 
 func (c *Config) SetFromJSON(b []byte) {

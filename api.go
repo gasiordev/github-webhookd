@@ -16,16 +16,18 @@ func getAPIGitHubWebhookPostHandler(trig *BuildTrigger) http.HandlerFunc {
 
 		event := r.Header.Get("X-GitHub-Event")
 
-		err = trig.ProcessGitHubPayload(&b, event)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
+		if event != "ping" {
+			err = trig.ProcessGitHubPayload(&b, event)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
 
-		err = trig.ForwardGitHubPayload(&b, r.Header)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
+			err = trig.ForwardGitHubPayload(&b, r.Header)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -36,6 +38,6 @@ func getAPIGitHubWebhookPostHandler(trig *BuildTrigger) http.HandlerFunc {
 
 func NewTriggerAPIRouter(trig *BuildTrigger) *(mux.Router) {
 	router := mux.NewRouter()
-	router.HandleFunc("/api/v1/github_webhook/", getAPIGitHubWebhookPostHandler(trig)).Methods("POST")
+	router.HandleFunc("/", getAPIGitHubWebhookPostHandler(trig)).Methods("POST")
 	return router
 }

@@ -79,31 +79,51 @@ func (trig *BuildTrigger) getJenkinsEndpointRetryDelay(e *JenkinsEndpoint) (int,
 	return rd, nil
 }
 
-func (trig *BuildTrigger) getRepository(j map[string]interface{}) string {
-	if j["repository"] != nil {
-		if j["repository"].(map[string]interface{})["name"] != nil {
-			return j["repository"].(map[string]interface{})["name"].(string)
-		} else {
-			return ""
+func (trig *BuildTrigger) getRepository(j map[string]interface{}, event string) string {
+	if event == "push" {
+		if j["repository"] != nil {
+			if j["repository"].(map[string]interface{})["name"] != nil {
+				return j["repository"].(map[string]interface{})["name"].(string)
+			}
 		}
-	} else {
-		return ""
+	} else if event == "pull_request" {
+		if j["pull_request"] != nil {
+			if j["pull_request"].(map[string]interface{})["head"] != nil {
+				if j["pull_request"].(map[string]interface{})["head"].(map[string]interface{})["repo"] != nil {
+					if j["pull_request"].(map[string]interface{})["head"].(map[string]interface{})["repo"].(map[string]interface{})["name"] != nil {
+						return j["pull_request"].(map[string]interface{})["head"].(map[string]interface{})["repo"].(map[string]interface{})["name"].(string)
+					}
+				}
+			}
+		}
 	}
+	return ""
 }
-func (trig *BuildTrigger) getRef(j map[string]interface{}) string {
+func (trig *BuildTrigger) getRef(j map[string]interface{}, event string) string {
 	if j["ref"] != nil {
 		return j["ref"].(string)
 	} else {
 		return ""
 	}
 }
-func (trig *BuildTrigger) getBranch(j map[string]interface{}) string {
-	ref := strings.Split(j["ref"].(string), "/")
-	if ref[1] == "tag" {
-		return ""
+func (trig *BuildTrigger) getBranch(j map[string]interface{}, event string) string {
+	if event == "push" {
+		ref := strings.Split(j["ref"].(string), "/")
+		if ref[1] == "tag" {
+			return ""
+		}
+		branch := ref[2]
+		return branch
 	}
-	branch := ref[2]
-	return branch
+	return ""
+}
+func (trig *BuildTrigger) getAction(j map[string]interface{}, event string) string {
+	if event == "pull_request" {
+		if j["action"] != nil {
+			return j["action"].(string)
+		}
+	}
+	return ""
 }
 
 func (trig *BuildTrigger) checkEventRepositories(repos *([]EndpointConditionRepository), repo string, branch string) bool {
@@ -142,50 +162,81 @@ func (trig *BuildTrigger) checkEventBranches(branches *([]EndpointConditionBranc
 	}
 	return false
 }
+func (trig *BuildTrigger) checkEventActions(actions *([]string), action string) bool {
+	for _, a := range *actions {
+		if a == action || a == "*" {
+			return true
+		}
+	}
+	return false
+}
 
 func (trig *BuildTrigger) checkEndpointEvent(t *JenkinsTrigger, j map[string]interface{}, event string) error {
-	repo := trig.getRepository(j)
-	branch := trig.getBranch(j)
+	repo := trig.getRepository(j, event)
+	branch := trig.getBranch(j, event)
 
-	if t.Events.Push != nil && event == "push" {
-		if t.Events.Push != nil {
-			inRepos := false
-			if t.Events.Push.Repositories != nil {
-				inRepos = trig.checkEventRepositories(t.Events.Push.Repositories, repo, branch)
-			}
-			inBranches := false
-			if t.Events.Push.Branches != nil {
-				inBranches = trig.checkEventBranches(t.Events.Push.Branches, branch, repo)
-			}
-			inExcludeRepos := false
-			if t.Events.Push.ExcludeRepositories != nil {
-				inExcludeRepos = trig.checkEventRepositories(t.Events.Push.ExcludeRepositories, repo, branch)
-			}
-			inExcludeBranches := false
-			if t.Events.Push.ExcludeBranches != nil {
-				inExcludeBranches = trig.checkEventBranches(t.Events.Push.ExcludeBranches, branch, repo)
-			}
-
-			if (inRepos || inBranches) && !inExcludeRepos && !inExcludeBranches {
-				return nil
-			}
+	action := ""
+	if t.Events.PullRequest != nil && event == "pull_request" {
+		action = trig.getAction(j, event)
+		if action == "" {
+			return errors.New("action is empty")
 		}
+		inActions := trig.checkEventActions(t.Events.PullRequest.Actions, action)
+		if !inActions {
+			return errors.New("Event " + event + "not supported")
+		}
+	}
+
+	var c *EndpointConditions
+	if event == "push" && t.Events.Push != nil {
+		c = t.Events.Push
+	} else if event == "pull_request" && t.Events.PullRequest != nil {
+		c = t.Events.PullRequest
+	} else {
+		return errors.New("Event " + event + "not supported")
+	}
+
+	inRepos := false
+	if c.Repositories != nil {
+		inRepos = trig.checkEventRepositories(c.Repositories, repo, branch)
+	}
+	inBranches := false
+	if c.Branches != nil && event == "push" {
+		inBranches = trig.checkEventBranches(c.Branches, branch, repo)
+	}
+	inExcludeRepos := false
+	if c.ExcludeRepositories != nil {
+		inExcludeRepos = trig.checkEventRepositories(c.ExcludeRepositories, repo, branch)
+	}
+	inExcludeBranches := false
+	if c.ExcludeBranches != nil && event == "push" {
+		inExcludeBranches = trig.checkEventBranches(c.ExcludeBranches, branch, repo)
+	}
+	if (inRepos || inBranches) && !inExcludeRepos && !inExcludeBranches {
+		return nil
 	}
 
 	return errors.New("Event " + event + "not supported")
 }
 
 func (trig *BuildTrigger) processJenkinsEndpoint(t *JenkinsTrigger, j map[string]interface{}, event string) error {
-	repo := trig.getRepository(j)
-	ref := trig.getRef(j)
-	if repo == "" && ref == "" {
+	repo := trig.getRepository(j, event)
+	ref := trig.getRef(j, event)
+	if repo == "" {
 		return nil
 	}
 
-	log.Print(j)
-	branch := trig.getBranch(j)
-	if branch == "" {
-		return nil
+	if event == "push" {
+		if ref == "" {
+			return nil
+		}
+	}
+
+	branch := trig.getBranch(j, event)
+	if event == "push" {
+		if branch == "" {
+			return nil
+		}
 	}
 
 	endp := trig.config.Jenkins.EndpointsMap[t.Endpoint]
