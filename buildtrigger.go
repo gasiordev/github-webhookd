@@ -387,7 +387,7 @@ func (trig *BuildTrigger) ProcessGitHubPayload(b *([]byte), event string) error 
 }
 
 func (trig *BuildTrigger) ForwardGitHubPayload(b *([]byte), h http.Header) error {
-	githubHeaders := []string{"X-GitHub-Event", "X-Hub-Signature", "X-GitHub-Delivery"}
+	githubHeaders := []string{"X-GitHub-Event", "X-Hub-Signature", "X-GitHub-Delivery", "content-type"}
 	if trig.config.Forward != nil {
 		for _, f := range *(trig.config.Forward) {
 			if f.URL != "" {
