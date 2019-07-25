@@ -55,6 +55,8 @@ type JenkinsTrigger struct {
 type Events struct {
 	Push        *EndpointConditions `json:"push";omitempty`
 	PullRequest *EndpointConditions `json:"pull_request";omitempty`
+	Create      *EndpointConditions `json:"create";omitempty`
+	Delete      *EndpointConditions `json:"delete";omitempty`
 }
 
 type EndpointConditions struct {

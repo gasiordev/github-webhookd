@@ -80,7 +80,7 @@ func (trig *BuildTrigger) getJenkinsEndpointRetryDelay(e *JenkinsEndpoint) (int,
 }
 
 func (trig *BuildTrigger) getRepository(j map[string]interface{}, event string) string {
-	if event == "push" {
+	if event == "push" || event == "create" || event == "delete" {
 		if j["repository"] != nil {
 			if j["repository"].(map[string]interface{})["name"] != nil {
 				return j["repository"].(map[string]interface{})["name"].(string)
@@ -106,6 +106,13 @@ func (trig *BuildTrigger) getRef(j map[string]interface{}, event string) string 
 		return ""
 	}
 }
+func (trig *BuildTrigger) getRefType(j map[string]interface{}, event string) string {
+	if j["ref_type"] != nil {
+		return j["ref_type"].(string)
+	} else {
+		return ""
+	}
+}
 func (trig *BuildTrigger) getBranch(j map[string]interface{}, event string) string {
 	if event == "push" {
 		ref := strings.Split(j["ref"].(string), "/")
@@ -114,6 +121,15 @@ func (trig *BuildTrigger) getBranch(j map[string]interface{}, event string) stri
 		}
 		branch := ref[2]
 		return branch
+	}
+	if event == "create" || event == "delete" {
+		ref := j["ref"].(string)
+		refType := j["ref_type"].(string)
+		if refType != "branch" {
+			return ""
+		} else {
+			return ref
+		}
 	}
 	return ""
 }
@@ -192,6 +208,10 @@ func (trig *BuildTrigger) checkEndpointEvent(t *JenkinsTrigger, j map[string]int
 		c = t.Events.Push
 	} else if event == "pull_request" && t.Events.PullRequest != nil {
 		c = t.Events.PullRequest
+	} else if event == "create" && t.Events.Create != nil {
+		c = t.Events.Create
+	} else if event == "delete" && t.Events.Delete != nil {
+		c = t.Events.Delete
 	} else {
 		return errors.New("Event " + event + "not supported")
 	}
