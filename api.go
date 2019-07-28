@@ -16,6 +16,14 @@ func getAPIGitHubWebhookPostHandler(trig *BuildTrigger) http.HandlerFunc {
 
 		event := r.Header.Get("X-GitHub-Event")
 
+		signature := r.Header.Get("X-Hub-Signature")
+		config := trig.GetConfig()
+		if config.Secret != "" {
+			if !trig.VerifySignature([]byte(config.Secret), signature, &b) {
+				http.Error(w, "Signature verification failed", 401)
+			}
+		}
+
 		if event != "ping" {
 			err = trig.ProcessGitHubPayload(&b, event)
 			if err != nil {

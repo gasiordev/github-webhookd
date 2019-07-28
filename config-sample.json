@@ -1,6 +1,7 @@
 {
   "version": "3",
   "port": "32222",
+  "secret": "GITHUB_SECRET",
   "jenkins": {
     "user": "USER",
     "token": "TOKEN",

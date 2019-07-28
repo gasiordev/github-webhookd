@@ -11,6 +11,7 @@ type Config struct {
 	Jenkins  Jenkins      `json:"jenkins"`
 	Triggers Trigger      `json:"triggers"`
 	Forward  *([]Forward) `json:"forward"`
+	Secret   string       `json:"secret";omitempty`
 }
 
 type Jenkins struct {

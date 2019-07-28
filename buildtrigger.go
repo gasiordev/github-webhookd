@@ -2,6 +2,9 @@ package main
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -431,4 +434,16 @@ func (trig *BuildTrigger) ForwardGitHubPayload(b *([]byte), h http.Header) error
 		}
 	}
 	return nil
+}
+
+func (trig *BuildTrigger) signBody(secret []byte, body []byte) []byte {
+	computed := hmac.New(sha1.New, secret)
+	computed.Write(body)
+	return []byte(computed.Sum(nil))
+}
+
+func (trig *BuildTrigger) VerifySignature(secret []byte, signature string, body *([]byte)) bool {
+	actual := make([]byte, 20)
+	hex.Decode(actual, []byte(signature[5:]))
+	return hmac.Equal(trig.signBody(secret, *body), actual)
 }
