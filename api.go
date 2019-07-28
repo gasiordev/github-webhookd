@@ -21,6 +21,7 @@ func getAPIGitHubWebhookPostHandler(trig *BuildTrigger) http.HandlerFunc {
 		if config.Secret != "" {
 			if !trig.VerifySignature([]byte(config.Secret), signature, &b) {
 				http.Error(w, "Signature verification failed", 401)
+				return
 			}
 		}
 
