@@ -430,6 +430,8 @@ func (trig *BuildTrigger) ForwardGitHubPayload(b *([]byte), h http.Header) error
 				if err != nil {
 					return err
 				}
+
+				log.Print("Forwarded to endpoint " + f.URL)
 			}
 		}
 	}
