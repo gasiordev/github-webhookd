@@ -41,7 +41,7 @@ func (app *App) Init(p string) {
 
 func (app *App) Start() int {
 	done := make(chan bool)
-	go app.startTriggerAPI()
+	go app.startAPI()
 	<-done
 	return 0
 }
@@ -51,10 +51,9 @@ func (app *App) Run() {
 	cli.Run(app)
 }
 
-func (app *App) startTriggerAPI() {
-	router := NewTriggerAPIRouter(app)
-	log.Print("Starting daemon listening on " + app.config.Port + "...")
-	log.Fatal(http.ListenAndServe(":"+app.config.Port, router))
+func (app *App) startAPI() {
+	api := NewAPI()
+	api.Run(app)
 }
 
 func (app *App) getJenkinsEndpointRetryCount(e *JenkinsEndpoint) (int, error) {
