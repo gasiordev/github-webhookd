@@ -2,37 +2,46 @@ package main
 
 import (
 	"fmt"
-	"github.com/mikolajgasior/go-cli"
+	gocli "github.com/mikolajgasior/go-cli"
 	"os"
 )
 
-func getCLIStartTriggerHandler(trig *BuildTrigger) func(*cli.CLI) int {
-	fn := func(c *cli.CLI) int {
-		trig.Init(c.Flag("config"))
-		return trig.Start()
-	}
-
-	return fn
+type CLI struct {
+	gocli *gocli.CLI
+	app   *App
 }
 
-func getCLIVersionHandler(trig *BuildTrigger) func(*cli.CLI) int {
-	fn := func(c *cli.CLI) int {
-		fmt.Fprintf(os.Stdout, VERSION+"\n")
-		return 0
-	}
-	return fn
+func NewCLI() *CLI {
+	cli := &CLI{}
+	return cli
 }
 
-func NewBuildTriggerCLI(trig *BuildTrigger) *cli.CLI {
-	BuildTriggerCLI := cli.NewCLI("github-webhookd", "Tiny API to receive GitHub Webhooks and trigger Jenkins jobs", "Mikolaj Gasior <mg@gen64.pl>")
+func (cli *CLI) Init(app *App) {
+	cli.app = app
 
-	cmdStart := BuildTriggerCLI.AddCmd("start", "Starts API", getCLIStartTriggerHandler(trig))
-	cmdStart.AddFlag("config", "Config file", cli.CLIFlagTypePathFile|cli.CLIFlagMustExist|cli.CLIFlagRequired)
+	cli.gocli = gocli.NewCLI("github-webhookd", "Tiny API to receive GitHub Webhooks and trigger Jenkins jobs", "Mikolaj Gasior <mg@gen64.pl>")
 
-	_ = BuildTriggerCLI.AddCmd("version", "Prints version", getCLIVersionHandler(trig))
+	cmdStart := cli.gocli.AddCmd("start", "Starts API", cli.startHandler)
+	cmdStart.AddFlag("config", "Config file", gocli.CLIFlagTypePathFile|gocli.CLIFlagMustExist|gocli.CLIFlagRequired)
+
+	_ = cli.gocli.AddCmd("version", "Prints version", cli.versionHandler)
 
 	if len(os.Args) == 2 && (os.Args[1] == "-v" || os.Args[1] == "--version") {
-		os.Args = []string{"BuildTrigger", "version"}
+		os.Args = []string{"App", "version"}
 	}
-	return BuildTriggerCLI
+}
+
+func (cli *CLI) Run(app *App) {
+	cli.Init(app)
+	os.Exit(cli.gocli.Run(os.Stdout, os.Stderr))
+}
+
+func (cli *CLI) startHandler(c *gocli.CLI) int {
+	cli.app.Init(c.Flag("config"))
+	return cli.app.Start()
+}
+
+func (cli *CLI) versionHandler(c *gocli.CLI) int {
+	fmt.Fprintf(os.Stdout, VERSION+"\n")
+	return 0
 }

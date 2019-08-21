@@ -10,26 +10,25 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
-type BuildTrigger struct {
+type App struct {
 	config Config
 }
 
-func NewBuildTrigger() *BuildTrigger {
-	trig := &BuildTrigger{}
-	return trig
+func NewApp() *App {
+	app := &App{}
+	return app
 }
 
-func (trig *BuildTrigger) GetConfig() *Config {
-	return &(trig.config)
+func (app *App) GetConfig() *Config {
+	return &(app.config)
 }
 
-func (trig *BuildTrigger) Init(p string) {
+func (app *App) Init(p string) {
 	c, err := ioutil.ReadFile(p)
 	if err != nil {
 		log.Fatal("Error reading config file")
@@ -37,28 +36,28 @@ func (trig *BuildTrigger) Init(p string) {
 
 	var cfg Config
 	cfg.SetFromJSON(c)
-	trig.config = cfg
+	app.config = cfg
 }
 
-func (trig *BuildTrigger) Start() int {
+func (app *App) Start() int {
 	done := make(chan bool)
-	go trig.startTriggerAPI()
+	go app.startTriggerAPI()
 	<-done
 	return 0
 }
 
-func (trig *BuildTrigger) Run() {
-	trigCLI := NewBuildTriggerCLI(trig)
-	os.Exit(trigCLI.Run(os.Stdout, os.Stderr))
+func (app *App) Run() {
+	cli := NewCLI()
+	cli.Run(app)
 }
 
-func (trig *BuildTrigger) startTriggerAPI() {
-	router := NewTriggerAPIRouter(trig)
-	log.Print("Starting daemon listening on " + trig.config.Port + "...")
-	log.Fatal(http.ListenAndServe(":"+trig.config.Port, router))
+func (app *App) startTriggerAPI() {
+	router := NewTriggerAPIRouter(app)
+	log.Print("Starting daemon listening on " + app.config.Port + "...")
+	log.Fatal(http.ListenAndServe(":"+app.config.Port, router))
 }
 
-func (trig *BuildTrigger) getJenkinsEndpointRetryCount(e *JenkinsEndpoint) (int, error) {
+func (app *App) getJenkinsEndpointRetryCount(e *JenkinsEndpoint) (int, error) {
 	rc := int(1)
 	if e.Retry.Count != "" {
 		i, err := strconv.Atoi(e.Retry.Count)
@@ -70,7 +69,7 @@ func (trig *BuildTrigger) getJenkinsEndpointRetryCount(e *JenkinsEndpoint) (int,
 	return rc, nil
 }
 
-func (trig *BuildTrigger) getJenkinsEndpointRetryDelay(e *JenkinsEndpoint) (int, error) {
+func (app *App) getJenkinsEndpointRetryDelay(e *JenkinsEndpoint) (int, error) {
 	rd := int(0)
 	if e.Retry.Delay != "" {
 		i, err := strconv.Atoi(e.Retry.Count)
@@ -82,7 +81,7 @@ func (trig *BuildTrigger) getJenkinsEndpointRetryDelay(e *JenkinsEndpoint) (int,
 	return rd, nil
 }
 
-func (trig *BuildTrigger) getRepository(j map[string]interface{}, event string) string {
+func (app *App) getRepository(j map[string]interface{}, event string) string {
 	if event == "push" || event == "create" || event == "delete" {
 		if j["repository"] != nil {
 			if j["repository"].(map[string]interface{})["name"] != nil {
@@ -102,21 +101,21 @@ func (trig *BuildTrigger) getRepository(j map[string]interface{}, event string) 
 	}
 	return ""
 }
-func (trig *BuildTrigger) getRef(j map[string]interface{}, event string) string {
+func (app *App) getRef(j map[string]interface{}, event string) string {
 	if j["ref"] != nil {
 		return j["ref"].(string)
 	} else {
 		return ""
 	}
 }
-func (trig *BuildTrigger) getRefType(j map[string]interface{}, event string) string {
+func (app *App) getRefType(j map[string]interface{}, event string) string {
 	if j["ref_type"] != nil {
 		return j["ref_type"].(string)
 	} else {
 		return ""
 	}
 }
-func (trig *BuildTrigger) getBranch(j map[string]interface{}, event string) string {
+func (app *App) getBranch(j map[string]interface{}, event string) string {
 	if event == "push" {
 		ref := strings.Split(j["ref"].(string), "/")
 		if ref[1] == "tag" {
@@ -136,7 +135,7 @@ func (trig *BuildTrigger) getBranch(j map[string]interface{}, event string) stri
 	}
 	return ""
 }
-func (trig *BuildTrigger) getAction(j map[string]interface{}, event string) string {
+func (app *App) getAction(j map[string]interface{}, event string) string {
 	if event == "pull_request" {
 		if j["action"] != nil {
 			return j["action"].(string)
@@ -145,7 +144,7 @@ func (trig *BuildTrigger) getAction(j map[string]interface{}, event string) stri
 	return ""
 }
 
-func (trig *BuildTrigger) checkEventRepositories(repos *([]EndpointConditionRepository), repo string, branch string) bool {
+func (app *App) checkEventRepositories(repos *([]EndpointConditionRepository), repo string, branch string) bool {
 	for _, r := range *repos {
 		if r.Name == repo || r.Name == "*" {
 			if r.Branches == nil || len(*(r.Branches)) == 0 {
@@ -163,7 +162,7 @@ func (trig *BuildTrigger) checkEventRepositories(repos *([]EndpointConditionRepo
 	}
 	return false
 }
-func (trig *BuildTrigger) checkEventBranches(branches *([]EndpointConditionBranch), branch string, repo string) bool {
+func (app *App) checkEventBranches(branches *([]EndpointConditionBranch), branch string, repo string) bool {
 	for _, b := range *branches {
 		if b.Name == branch || b.Name == "*" {
 			if b.Repositories == nil || len(*(b.Repositories)) == 0 {
@@ -181,7 +180,7 @@ func (trig *BuildTrigger) checkEventBranches(branches *([]EndpointConditionBranc
 	}
 	return false
 }
-func (trig *BuildTrigger) checkEventActions(actions *([]string), action string) bool {
+func (app *App) checkEventActions(actions *([]string), action string) bool {
 	for _, a := range *actions {
 		if a == action || a == "*" {
 			return true
@@ -190,17 +189,17 @@ func (trig *BuildTrigger) checkEventActions(actions *([]string), action string) 
 	return false
 }
 
-func (trig *BuildTrigger) checkEndpointEvent(t *JenkinsTrigger, j map[string]interface{}, event string) error {
-	repo := trig.getRepository(j, event)
-	branch := trig.getBranch(j, event)
+func (app *App) checkEndpointEvent(t *JenkinsTrigger, j map[string]interface{}, event string) error {
+	repo := app.getRepository(j, event)
+	branch := app.getBranch(j, event)
 
 	action := ""
 	if t.Events.PullRequest != nil && event == "pull_request" {
-		action = trig.getAction(j, event)
+		action = app.getAction(j, event)
 		if action == "" {
 			return errors.New("action is empty")
 		}
-		inActions := trig.checkEventActions(t.Events.PullRequest.Actions, action)
+		inActions := app.checkEventActions(t.Events.PullRequest.Actions, action)
 		if !inActions {
 			return errors.New("Event " + event + "not supported")
 		}
@@ -221,19 +220,19 @@ func (trig *BuildTrigger) checkEndpointEvent(t *JenkinsTrigger, j map[string]int
 
 	inRepos := false
 	if c.Repositories != nil {
-		inRepos = trig.checkEventRepositories(c.Repositories, repo, branch)
+		inRepos = app.checkEventRepositories(c.Repositories, repo, branch)
 	}
 	inBranches := false
 	if c.Branches != nil && event == "push" {
-		inBranches = trig.checkEventBranches(c.Branches, branch, repo)
+		inBranches = app.checkEventBranches(c.Branches, branch, repo)
 	}
 	inExcludeRepos := false
 	if c.ExcludeRepositories != nil {
-		inExcludeRepos = trig.checkEventRepositories(c.ExcludeRepositories, repo, branch)
+		inExcludeRepos = app.checkEventRepositories(c.ExcludeRepositories, repo, branch)
 	}
 	inExcludeBranches := false
 	if c.ExcludeBranches != nil && event == "push" {
-		inExcludeBranches = trig.checkEventBranches(c.ExcludeBranches, branch, repo)
+		inExcludeBranches = app.checkEventBranches(c.ExcludeBranches, branch, repo)
 	}
 	if (inRepos || inBranches) && !inExcludeRepos && !inExcludeBranches {
 		return nil
@@ -242,9 +241,9 @@ func (trig *BuildTrigger) checkEndpointEvent(t *JenkinsTrigger, j map[string]int
 	return errors.New("Event " + event + "not supported")
 }
 
-func (trig *BuildTrigger) processJenkinsEndpoint(t *JenkinsTrigger, j map[string]interface{}, event string) error {
-	repo := trig.getRepository(j, event)
-	ref := trig.getRef(j, event)
+func (app *App) processJenkinsEndpoint(t *JenkinsTrigger, j map[string]interface{}, event string) error {
+	repo := app.getRepository(j, event)
+	ref := app.getRef(j, event)
 	if repo == "" {
 		return nil
 	}
@@ -255,41 +254,41 @@ func (trig *BuildTrigger) processJenkinsEndpoint(t *JenkinsTrigger, j map[string
 		}
 	}
 
-	branch := trig.getBranch(j, event)
+	branch := app.getBranch(j, event)
 	if event == "push" {
 		if branch == "" {
 			return nil
 		}
 	}
 
-	endp := trig.config.Jenkins.EndpointsMap[t.Endpoint]
+	endp := app.config.Jenkins.EndpointsMap[t.Endpoint]
 	if endp == nil {
 		return nil
 	}
 
-	err := trig.checkEndpointEvent(t, j, event)
+	err := app.checkEndpointEvent(t, j, event)
 	if err != nil {
 		return nil
 	}
 
-	rd, err := trig.getJenkinsEndpointRetryDelay(endp)
+	rd, err := app.getJenkinsEndpointRetryDelay(endp)
 	if err != nil {
 		return nil
 	}
-	rc, err := trig.getJenkinsEndpointRetryCount(endp)
+	rc, err := app.getJenkinsEndpointRetryCount(endp)
 	if err != nil {
 		return nil
 	}
 
-	return trig.processJenkinsEndpointRetries(endp, repo, branch, rd, rc)
+	return app.processJenkinsEndpointRetries(endp, repo, branch, rd, rc)
 }
 
-func (trig *BuildTrigger) printIteration(i int, rc int) {
+func (app *App) printIteration(i int, rc int) {
 	log.Print("Retry: (" + strconv.Itoa(i+1) + "/" + strconv.Itoa(rc) + ")")
 }
 
-func (trig *BuildTrigger) getCrumbAndSleep(u string, t string, rd int) (string, error) {
-	crumb, err := trig.getCrumb(u, t)
+func (app *App) getCrumbAndSleep(u string, t string, rd int) (string, error) {
+	crumb, err := app.getCrumb(u, t)
 	if err != nil {
 		log.Print("Error getting crumb")
 		time.Sleep(time.Second * time.Duration(rd))
@@ -298,13 +297,13 @@ func (trig *BuildTrigger) getCrumbAndSleep(u string, t string, rd int) (string, 
 	return crumb, nil
 }
 
-func (trig *BuildTrigger) replacePathWithRepoAndBranch(p string, r string, b string) string {
+func (app *App) replacePathWithRepoAndBranch(p string, r string, b string) string {
 	s := strings.ReplaceAll(p, "{{.repository}}", r)
 	s = strings.ReplaceAll(s, "{{.branch}}", b)
 	return s
 }
 
-func (trig *BuildTrigger) compareHTTPStatusAndSleep(rsCode int, es string, rd int) (bool, error) {
+func (app *App) compareHTTPStatusAndSleep(rsCode int, es string, rd int) (bool, error) {
 	esCode, err := strconv.Atoi(es)
 	if err != nil {
 		return false, errors.New("Error converting Success.HTTPStatus to int")
@@ -318,21 +317,21 @@ func (trig *BuildTrigger) compareHTTPStatusAndSleep(rsCode int, es string, rd in
 	return true, nil
 }
 
-func (trig *BuildTrigger) processJenkinsEndpointRetries(endpointDef *JenkinsEndpoint, repo string, branch string, retryDelay int, retryCount int) error {
+func (app *App) processJenkinsEndpointRetries(endpointDef *JenkinsEndpoint, repo string, branch string, retryDelay int, retryCount int) error {
 	iterations := int(0)
 	if retryCount > 0 {
 		for iterations < retryCount {
-			trig.printIteration(iterations, retryCount)
+			app.printIteration(iterations, retryCount)
 
-			crumb, err := trig.getCrumbAndSleep(trig.config.Jenkins.User, trig.config.Jenkins.Token, retryDelay)
+			crumb, err := app.getCrumbAndSleep(app.config.Jenkins.User, app.config.Jenkins.Token, retryDelay)
 			if err != nil {
 				iterations++
 				continue
 			}
 
-			endpointPath := trig.replacePathWithRepoAndBranch(endpointDef.Path, repo, branch)
+			endpointPath := app.replacePathWithRepoAndBranch(endpointDef.Path, repo, branch)
 
-			req, err := http.NewRequest("POST", trig.config.Jenkins.BaseURL+"/"+endpointPath, strings.NewReader(""))
+			req, err := http.NewRequest("POST", app.config.Jenkins.BaseURL+"/"+endpointPath, strings.NewReader(""))
 			if err != nil {
 				log.Print("Error creating request to " + endpointPath)
 				time.Sleep(time.Second * time.Duration(retryDelay))
@@ -341,7 +340,7 @@ func (trig *BuildTrigger) processJenkinsEndpointRetries(endpointDef *JenkinsEndp
 			}
 
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-			req.SetBasicAuth(trig.config.Jenkins.User, trig.config.Jenkins.Token)
+			req.SetBasicAuth(app.config.Jenkins.User, app.config.Jenkins.Token)
 			req.Header.Add("Jenkins-Crumb", crumb)
 			c := &http.Client{}
 			resp, err := c.Do(req)
@@ -356,7 +355,7 @@ func (trig *BuildTrigger) processJenkinsEndpointRetries(endpointDef *JenkinsEndp
 			log.Print("Posted to endpoint " + endpointPath)
 
 			if endpointDef.Success.HTTPStatus != "" {
-				cmp, err := trig.compareHTTPStatusAndSleep(resp.StatusCode, endpointDef.Success.HTTPStatus, retryDelay)
+				cmp, err := app.compareHTTPStatusAndSleep(resp.StatusCode, endpointDef.Success.HTTPStatus, retryDelay)
 				if err != nil {
 					return err
 				}
@@ -372,13 +371,13 @@ func (trig *BuildTrigger) processJenkinsEndpointRetries(endpointDef *JenkinsEndp
 	return errors.New("Unable to post to endpoint " + endpointDef.Path)
 }
 
-func (trig *BuildTrigger) getCrumb(user string, token string) (string, error) {
-	req, err := http.NewRequest("GET", trig.config.Jenkins.BaseURL+"/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)", strings.NewReader(""))
+func (app *App) getCrumb(user string, token string) (string, error) {
+	req, err := http.NewRequest("GET", app.config.Jenkins.BaseURL+"/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)", strings.NewReader(""))
 	if err != nil {
 		return "", err
 	}
 
-	req.SetBasicAuth(trig.config.Jenkins.User, trig.config.Jenkins.Token)
+	req.SetBasicAuth(app.config.Jenkins.User, app.config.Jenkins.Token)
 	c := &http.Client{}
 	resp, err := c.Do(req)
 	if err != nil {
@@ -390,16 +389,16 @@ func (trig *BuildTrigger) getCrumb(user string, token string) (string, error) {
 	return strings.Split(string(b), ":")[1], nil
 }
 
-func (trig *BuildTrigger) ProcessGitHubPayload(b *([]byte), event string) error {
+func (app *App) ProcessGitHubPayload(b *([]byte), event string) error {
 	j := make(map[string]interface{})
 	err := json.Unmarshal(*b, &j)
 	if err != nil {
 		return errors.New("Got non-JSON payload")
 	}
 
-	if trig.config.Triggers.Jenkins != nil {
-		for _, t := range trig.config.Triggers.Jenkins {
-			err := trig.processJenkinsEndpoint(&t, j, event)
+	if app.config.Triggers.Jenkins != nil {
+		for _, t := range app.config.Triggers.Jenkins {
+			err := app.processJenkinsEndpoint(&t, j, event)
 			if err != nil {
 				log.Print("Error processing endpoint " + t.Endpoint + ". Breaking.")
 				break
@@ -409,10 +408,10 @@ func (trig *BuildTrigger) ProcessGitHubPayload(b *([]byte), event string) error 
 	return nil
 }
 
-func (trig *BuildTrigger) ForwardGitHubPayload(b *([]byte), h http.Header) error {
+func (app *App) ForwardGitHubPayload(b *([]byte), h http.Header) error {
 	githubHeaders := []string{"X-GitHub-Event", "X-Hub-Signature", "X-GitHub-Delivery", "content-type"}
-	if trig.config.Forward != nil {
-		for _, f := range *(trig.config.Forward) {
+	if app.config.Forward != nil {
+		for _, f := range *(app.config.Forward) {
 			if f.URL != "" {
 				req, err := http.NewRequest("POST", f.URL, bytes.NewReader(*b))
 				if f.Headers {
@@ -438,14 +437,14 @@ func (trig *BuildTrigger) ForwardGitHubPayload(b *([]byte), h http.Header) error
 	return nil
 }
 
-func (trig *BuildTrigger) signBody(secret []byte, body []byte) []byte {
+func (app *App) signBody(secret []byte, body []byte) []byte {
 	computed := hmac.New(sha1.New, secret)
 	computed.Write(body)
 	return []byte(computed.Sum(nil))
 }
 
-func (trig *BuildTrigger) VerifySignature(secret []byte, signature string, body *([]byte)) bool {
+func (app *App) VerifySignature(secret []byte, signature string, body *([]byte)) bool {
 	actual := make([]byte, 20)
 	hex.Decode(actual, []byte(signature[5:]))
-	return hmac.Equal(trig.signBody(secret, *body), actual)
+	return hmac.Equal(app.signBody(secret, *body), actual)
 }
