@@ -60,30 +60,6 @@ func (app *App) startAPI() {
 	api.Run(app)
 }
 
-func (app *App) getJenkinsEndpointRetryCount(e *JenkinsEndpoint) (int, error) {
-	rc := int(1)
-	if e.Retry.Count != "" {
-		i, err := strconv.Atoi(e.Retry.Count)
-		if err != nil {
-			return 0, errors.New("Value of Retry.Count cannot be converted to int")
-		}
-		rc = i
-	}
-	return rc, nil
-}
-
-func (app *App) getJenkinsEndpointRetryDelay(e *JenkinsEndpoint) (int, error) {
-	rd := int(0)
-	if e.Retry.Delay != "" {
-		i, err := strconv.Atoi(e.Retry.Count)
-		if err != nil {
-			return 0, errors.New("Value of Retry.Delay cannot be converted to int")
-		}
-		rd = i
-	}
-	return rd, nil
-}
-
 func (app *App) checkEventRepositories(repos *([]EndpointConditionRepository), repo string, branch string) bool {
 	for _, r := range *repos {
 		if r.Name == repo || r.Name == "*" {
@@ -211,11 +187,11 @@ func (app *App) processJenkinsEndpoint(t *JenkinsTrigger, j map[string]interface
 		return nil
 	}
 
-	rd, err := app.getJenkinsEndpointRetryDelay(endp)
+	rd, err := endp.GetRetryDelay()
 	if err != nil {
 		return nil
 	}
-	rc, err := app.getJenkinsEndpointRetryCount(endp)
+	rc, err := endp.GetRetryCount()
 	if err != nil {
 		return nil
 	}

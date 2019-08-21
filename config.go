@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
+	"strconv"
 )
 
 type Config struct {
@@ -28,6 +30,30 @@ type JenkinsEndpoint struct {
 	Retry     JenkinsEndpointRetry   `json:"retry"`
 	Success   JenkinsEndpointSuccess `json:"success"`
 	Condition string                 `json:"condition"`
+}
+
+func (endpoint *JenkinsEndpoint) GetRetryCount() (int, error) {
+	rc := int(1)
+	if endpoint.Retry.Count != "" {
+		i, err := strconv.Atoi(endpoint.Retry.Count)
+		if err != nil {
+			return 0, errors.New("Value of Retry.Count cannot be converted to int")
+		}
+		rc = i
+	}
+	return rc, nil
+}
+
+func (endpoint *JenkinsEndpoint) GetRetryDelay() (int, error) {
+	rd := int(0)
+	if endpoint.Retry.Delay != "" {
+		i, err := strconv.Atoi(endpoint.Retry.Count)
+		if err != nil {
+			return 0, errors.New("Value of Retry.Delay cannot be converted to int")
+		}
+		rd = i
+	}
+	return rd, nil
 }
 
 type JenkinsEndpointRetry struct {
