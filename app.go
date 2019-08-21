@@ -2,9 +2,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha1"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -17,6 +14,7 @@ import (
 
 type App struct {
 	config Config
+	github *GitHub
 }
 
 func NewApp() *App {
@@ -28,6 +26,10 @@ func (app *App) GetConfig() *Config {
 	return &(app.config)
 }
 
+func (app *App) GetGitHub() *GitHub {
+	return app.github
+}
+
 func (app *App) Init(p string) {
 	c, err := ioutil.ReadFile(p)
 	if err != nil {
@@ -37,6 +39,8 @@ func (app *App) Init(p string) {
 	var cfg Config
 	cfg.SetFromJSON(c)
 	app.config = cfg
+
+	app.github = NewGitHub()
 }
 
 func (app *App) Start() int {
@@ -78,69 +82,6 @@ func (app *App) getJenkinsEndpointRetryDelay(e *JenkinsEndpoint) (int, error) {
 		rd = i
 	}
 	return rd, nil
-}
-
-func (app *App) getRepository(j map[string]interface{}, event string) string {
-	if event == "push" || event == "create" || event == "delete" {
-		if j["repository"] != nil {
-			if j["repository"].(map[string]interface{})["name"] != nil {
-				return j["repository"].(map[string]interface{})["name"].(string)
-			}
-		}
-	} else if event == "pull_request" {
-		if j["pull_request"] != nil {
-			if j["pull_request"].(map[string]interface{})["head"] != nil {
-				if j["pull_request"].(map[string]interface{})["head"].(map[string]interface{})["repo"] != nil {
-					if j["pull_request"].(map[string]interface{})["head"].(map[string]interface{})["repo"].(map[string]interface{})["name"] != nil {
-						return j["pull_request"].(map[string]interface{})["head"].(map[string]interface{})["repo"].(map[string]interface{})["name"].(string)
-					}
-				}
-			}
-		}
-	}
-	return ""
-}
-func (app *App) getRef(j map[string]interface{}, event string) string {
-	if j["ref"] != nil {
-		return j["ref"].(string)
-	} else {
-		return ""
-	}
-}
-func (app *App) getRefType(j map[string]interface{}, event string) string {
-	if j["ref_type"] != nil {
-		return j["ref_type"].(string)
-	} else {
-		return ""
-	}
-}
-func (app *App) getBranch(j map[string]interface{}, event string) string {
-	if event == "push" {
-		ref := strings.Split(j["ref"].(string), "/")
-		if ref[1] == "tag" {
-			return ""
-		}
-		branch := ref[2]
-		return branch
-	}
-	if event == "create" || event == "delete" {
-		ref := j["ref"].(string)
-		refType := j["ref_type"].(string)
-		if refType != "branch" {
-			return ""
-		} else {
-			return ref
-		}
-	}
-	return ""
-}
-func (app *App) getAction(j map[string]interface{}, event string) string {
-	if event == "pull_request" {
-		if j["action"] != nil {
-			return j["action"].(string)
-		}
-	}
-	return ""
 }
 
 func (app *App) checkEventRepositories(repos *([]EndpointConditionRepository), repo string, branch string) bool {
@@ -189,12 +130,12 @@ func (app *App) checkEventActions(actions *([]string), action string) bool {
 }
 
 func (app *App) checkEndpointEvent(t *JenkinsTrigger, j map[string]interface{}, event string) error {
-	repo := app.getRepository(j, event)
-	branch := app.getBranch(j, event)
+	repo := app.github.GetRepository(j, event)
+	branch := app.github.GetBranch(j, event)
 
 	action := ""
 	if t.Events.PullRequest != nil && event == "pull_request" {
-		action = app.getAction(j, event)
+		action = app.github.GetAction(j, event)
 		if action == "" {
 			return errors.New("action is empty")
 		}
@@ -241,8 +182,8 @@ func (app *App) checkEndpointEvent(t *JenkinsTrigger, j map[string]interface{}, 
 }
 
 func (app *App) processJenkinsEndpoint(t *JenkinsTrigger, j map[string]interface{}, event string) error {
-	repo := app.getRepository(j, event)
-	ref := app.getRef(j, event)
+	repo := app.github.GetRepository(j, event)
+	ref := app.github.GetRef(j, event)
 	if repo == "" {
 		return nil
 	}
@@ -253,7 +194,7 @@ func (app *App) processJenkinsEndpoint(t *JenkinsTrigger, j map[string]interface
 		}
 	}
 
-	branch := app.getBranch(j, event)
+	branch := app.github.GetBranch(j, event)
 	if event == "push" {
 		if branch == "" {
 			return nil
@@ -434,16 +375,4 @@ func (app *App) ForwardGitHubPayload(b *([]byte), h http.Header) error {
 		}
 	}
 	return nil
-}
-
-func (app *App) signBody(secret []byte, body []byte) []byte {
-	computed := hmac.New(sha1.New, secret)
-	computed.Write(body)
-	return []byte(computed.Sum(nil))
-}
-
-func (app *App) VerifySignature(secret []byte, signature string, body *([]byte)) bool {
-	actual := make([]byte, 20)
-	hex.Decode(actual, []byte(signature[5:]))
-	return hmac.Equal(app.signBody(secret, *body), actual)
 }
