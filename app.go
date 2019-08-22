@@ -86,20 +86,6 @@ func (app *App) replacePathWithRepoAndBranch(p string, r string, b string) strin
 	return s
 }
 
-func (app *App) compareHTTPStatusAndSleep(rsCode int, es string, rd int) (bool, error) {
-	esCode, err := strconv.Atoi(es)
-	if err != nil {
-		return false, errors.New("Error converting Success.HTTPStatus to int")
-	}
-	if rsCode != esCode {
-		rs := strconv.Itoa(rsCode)
-		log.Print("HTTP Status " + rs + " different than expected " + es)
-		time.Sleep(time.Second * time.Duration(rd))
-		return false, nil
-	}
-	return true, nil
-}
-
 func (app *App) processJenkinsEndpointRetries(endpointDef *JenkinsEndpoint, repo string, branch string, retryDelay int, retryCount int) error {
 	iterations := int(0)
 	if retryCount > 0 {
@@ -114,38 +100,22 @@ func (app *App) processJenkinsEndpointRetries(endpointDef *JenkinsEndpoint, repo
 
 			endpointPath := app.replacePathWithRepoAndBranch(endpointDef.Path, repo, branch)
 
-			req, err := http.NewRequest("POST", app.config.Jenkins.BaseURL+"/"+endpointPath, strings.NewReader(""))
-			if err != nil {
-				log.Print("Error creating request to " + endpointPath)
-				time.Sleep(time.Second * time.Duration(retryDelay))
-				iterations++
-				continue
-			}
-
-			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-			req.SetBasicAuth(app.config.Jenkins.User, app.config.Jenkins.Token)
-			req.Header.Add("Jenkins-Crumb", crumb)
-			c := &http.Client{}
-			resp, err := c.Do(req)
+			resp, err := app.jenkinsAPI.Post(app.config.Jenkins.BaseURL+"/"+endpointPath, app.config.Jenkins.User, app.config.Jenkins.Token, crumb)
 			if err != nil {
 				log.Print("Error from request to " + endpointPath)
 				time.Sleep(time.Second * time.Duration(retryDelay))
 				iterations++
 				continue
 			}
-			resp.Body.Close()
 
 			log.Print("Posted to endpoint " + endpointPath)
 
-			if endpointDef.Success.HTTPStatus != "" {
-				cmp, err := app.compareHTTPStatusAndSleep(resp.StatusCode, endpointDef.Success.HTTPStatus, retryDelay)
-				if err != nil {
-					return err
-				}
-				if !cmp {
-					iterations++
-					continue
-				}
+			if !endpointDef.CheckHTTPStatus(resp.StatusCode) {
+				rs := strconv.Itoa(resp.StatusCode)
+				log.Print("HTTP Status " + rs + " different than expected ")
+				time.Sleep(time.Second * time.Duration(retryDelay))
+				iterations++
+				continue
 			}
 
 			return nil

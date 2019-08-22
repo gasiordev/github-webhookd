@@ -16,6 +16,17 @@ type Config struct {
 	Secret   string       `json:"secret";omitempty`
 }
 
+func (c *Config) SetFromJSON(b []byte) {
+	err := json.Unmarshal(b, c)
+	if err != nil {
+		log.Fatal("Error setting config from JSON:", err.Error())
+	}
+	c.Jenkins.EndpointsMap = make(map[string]*JenkinsEndpoint)
+	for i, e := range c.Jenkins.Endpoints {
+		c.Jenkins.EndpointsMap[e.Id] = &(c.Jenkins.Endpoints[i])
+	}
+}
+
 type Jenkins struct {
 	User         string            `json:"user"`
 	Token        string            `json:"token"`
@@ -54,6 +65,17 @@ func (endpoint *JenkinsEndpoint) GetRetryDelay() (int, error) {
 		rd = i
 	}
 	return rd, nil
+}
+
+func (endpoint *JenkinsEndpoint) CheckHTTPStatus(statusCode int) bool {
+	expected, err := strconv.Atoi(endpoint.Success.HTTPStatus)
+	if err != nil {
+		return false
+	}
+	if statusCode != expected {
+		return false
+	}
+	return true
 }
 
 type JenkinsEndpointRetry struct {
@@ -203,15 +225,4 @@ type EndpointConditionRepository struct {
 type EndpointConditionBranch struct {
 	Name         string      `json:"name"`
 	Repositories *([]string) `json:"repositories";omitempty`
-}
-
-func (c *Config) SetFromJSON(b []byte) {
-	err := json.Unmarshal(b, c)
-	if err != nil {
-		log.Fatal("Error setting config from JSON:", err.Error())
-	}
-	c.Jenkins.EndpointsMap = make(map[string]*JenkinsEndpoint)
-	for i, e := range c.Jenkins.Endpoints {
-		c.Jenkins.EndpointsMap[e.Id] = &(c.Jenkins.Endpoints[i])
-	}
 }
