@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/mikolajgasior/go-cli"
+	"github.com/gen64/go-cli"
 	"os"
 )
 

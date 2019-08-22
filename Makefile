@@ -6,7 +6,7 @@ PROJECT_SRC?=github.com/gen64/github-webhookd
 default: build
 
 tools:
-	GO111MODULE=off go get -u github.com/mikolajgasior/go-cli
+	GO111MODULE=off go get -u github.com/gen64/go-cli
 	GO111MODULE=off go get -u github.com/gorilla/mux
 
 guard-%:
