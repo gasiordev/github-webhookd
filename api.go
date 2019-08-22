@@ -38,12 +38,12 @@ func (api *API) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	githubAPI := api.app.GetGitHubAPI()
-	event := githubAPI.GetEvent(r)
-	signature := githubAPI.GetSignature(r)
+	githubPayload := api.app.GetGitHubPayload()
+	event := githubPayload.GetEvent(r)
+	signature := githubPayload.GetSignature(r)
 	config := api.app.GetConfig()
 	if config.Secret != "" {
-		if !githubAPI.VerifySignature([]byte(config.Secret), signature, &b) {
+		if !githubPayload.VerifySignature([]byte(config.Secret), signature, &b) {
 			http.Error(w, "Signature verification failed", 401)
 			return
 		}

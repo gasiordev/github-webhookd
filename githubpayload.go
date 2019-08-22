@@ -8,49 +8,49 @@ import (
 	"strings"
 )
 
-type GitHubAPI struct {
+type GitHubPayload struct {
 }
 
-func NewGitHubAPI() *GitHubAPI {
-	githubAPI := &GitHubAPI{}
-	return githubAPI
+func NewGitHubPayload() *GitHubPayload {
+	githubPayload := &GitHubPayload{}
+	return githubPayload
 }
 
-func (githubAPI *GitHubAPI) GetEvent(r *http.Request) string {
-	return r.Header.Get("X-GitHubAPI-Event")
+func (githubPayload *GitHubPayload) GetEvent(r *http.Request) string {
+	return r.Header.Get("X-GitHub-Event")
 }
 
-func (githubAPI *GitHubAPI) GetSignature(r *http.Request) string {
+func (githubPayload *GitHubPayload) GetSignature(r *http.Request) string {
 	return r.Header.Get("X-Hub-Signature")
 }
 
-func (githubAPI *GitHubAPI) signBody(secret []byte, body []byte) []byte {
+func (githubPayload *GitHubPayload) signBody(secret []byte, body []byte) []byte {
 	computed := hmac.New(sha1.New, secret)
 	computed.Write(body)
 	return []byte(computed.Sum(nil))
 }
 
-func (githubAPI *GitHubAPI) VerifySignature(secret []byte, signature string, body *([]byte)) bool {
+func (githubPayload *GitHubPayload) VerifySignature(secret []byte, signature string, body *([]byte)) bool {
 	actual := make([]byte, 20)
 	hex.Decode(actual, []byte(signature[5:]))
-	return hmac.Equal(githubAPI.signBody(secret, *body), actual)
+	return hmac.Equal(githubPayload.signBody(secret, *body), actual)
 }
 
-func (githubAPI *GitHubAPI) GetRef(j map[string]interface{}, event string) string {
+func (githubPayload *GitHubPayload) GetRef(j map[string]interface{}, event string) string {
 	if j["ref"] != nil {
 		return j["ref"].(string)
 	} else {
 		return ""
 	}
 }
-func (githubAPI *GitHubAPI) GetRefType(j map[string]interface{}, event string) string {
+func (githubPayload *GitHubPayload) GetRefType(j map[string]interface{}, event string) string {
 	if j["ref_type"] != nil {
 		return j["ref_type"].(string)
 	} else {
 		return ""
 	}
 }
-func (githubAPI *GitHubAPI) GetBranch(j map[string]interface{}, event string) string {
+func (githubPayload *GitHubPayload) GetBranch(j map[string]interface{}, event string) string {
 	if event == "push" {
 		ref := strings.Split(j["ref"].(string), "/")
 		if ref[1] == "tag" {
@@ -70,7 +70,7 @@ func (githubAPI *GitHubAPI) GetBranch(j map[string]interface{}, event string) st
 	}
 	return ""
 }
-func (githubAPI *GitHubAPI) GetAction(j map[string]interface{}, event string) string {
+func (githubPayload *GitHubPayload) GetAction(j map[string]interface{}, event string) string {
 	if event == "pull_request" {
 		if j["action"] != nil {
 			return j["action"].(string)
@@ -78,7 +78,7 @@ func (githubAPI *GitHubAPI) GetAction(j map[string]interface{}, event string) st
 	}
 	return ""
 }
-func (githubAPI *GitHubAPI) GetRepository(j map[string]interface{}, event string) string {
+func (githubPayload *GitHubPayload) GetRepository(j map[string]interface{}, event string) string {
 	if event == "push" || event == "create" || event == "delete" {
 		if j["repository"] != nil {
 			if j["repository"].(map[string]interface{})["name"] != nil {

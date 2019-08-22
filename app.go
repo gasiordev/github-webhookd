@@ -13,9 +13,9 @@ import (
 )
 
 type App struct {
-	config     Config
-	githubAPI  *GitHubAPI
-	jenkinsAPI *JenkinsAPI
+	config        Config
+	githubPayload *GitHubPayload
+	jenkinsAPI    *JenkinsAPI
 }
 
 func NewApp() *App {
@@ -27,8 +27,8 @@ func (app *App) GetConfig() *Config {
 	return &(app.config)
 }
 
-func (app *App) GetGitHubAPI() *GitHubAPI {
-	return app.githubAPI
+func (app *App) GetGitHubPayload() *GitHubPayload {
+	return app.githubPayload
 }
 
 func (app *App) GetJenkinsAPI() *JenkinsAPI {
@@ -45,7 +45,7 @@ func (app *App) Init(p string) {
 	cfg.SetFromJSON(c)
 	app.config = cfg
 
-	app.githubAPI = NewGitHubAPI()
+	app.githubPayload = NewGitHubPayload()
 	app.jenkinsAPI = NewJenkinsAPI()
 }
 
@@ -155,17 +155,16 @@ func (app *App) processJenkinsEndpointRetries(endpointDef *JenkinsEndpoint, repo
 }
 
 func (app *App) processPayloadOnJenkinsTrigger(jenkinstrigger *JenkinsTrigger, j map[string]interface{}, event string) error {
-	githubAPI := app.GetGitHubAPI()
+	githubPayload := app.GetGitHubPayload()
 	config := app.GetConfig()
 
-	repo := githubAPI.GetRepository(j, event)
-	ref := githubAPI.GetRef(j, event)
-	branch := githubAPI.GetBranch(j, event)
+	repo := githubPayload.GetRepository(j, event)
+	ref := githubPayload.GetRef(j, event)
+	branch := githubPayload.GetBranch(j, event)
 	action := ""
 	if jenkinstrigger.Events.PullRequest != nil && event == "pull_request" {
-		action = githubAPI.GetAction(j, event)
+		action = githubPayload.GetAction(j, event)
 	}
-
 	if repo == "" {
 		return nil
 	}
@@ -224,7 +223,7 @@ func (app *App) ProcessGitHubPayload(b *([]byte), event string) error {
 }
 
 func (app *App) ForwardGitHubPayload(b *([]byte), h http.Header) error {
-	githubHeaders := []string{"X-GitHubAPI-Event", "X-Hub-Signature", "X-GitHubAPI-Delivery", "content-type"}
+	githubHeaders := []string{"X-GitHubPayload-Event", "X-Hub-Signature", "X-GitHubPayload-Delivery", "content-type"}
 	if app.config.Forward != nil {
 		for _, f := range *(app.config.Forward) {
 			if f.URL != "" {
