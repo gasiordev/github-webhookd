@@ -13,8 +13,9 @@ import (
 )
 
 type App struct {
-	config Config
-	github *GitHub
+	config     Config
+	githubAPI  *GitHubAPI
+	jenkinsAPI *JenkinsAPI
 }
 
 func NewApp() *App {
@@ -26,8 +27,12 @@ func (app *App) GetConfig() *Config {
 	return &(app.config)
 }
 
-func (app *App) GetGitHub() *GitHub {
-	return app.github
+func (app *App) GetGitHubAPI() *GitHubAPI {
+	return app.githubAPI
+}
+
+func (app *App) GetJenkinsAPI() *JenkinsAPI {
+	return app.jenkinsAPI
 }
 
 func (app *App) Init(p string) {
@@ -40,7 +45,8 @@ func (app *App) Init(p string) {
 	cfg.SetFromJSON(c)
 	app.config = cfg
 
-	app.github = NewGitHub()
+	app.githubAPI = NewGitHubAPI()
+	app.jenkinsAPI = NewJenkinsAPI()
 }
 
 func (app *App) Start() int {
@@ -60,151 +66,12 @@ func (app *App) startAPI() {
 	api.Run(app)
 }
 
-func (app *App) checkEventRepositories(repos *([]EndpointConditionRepository), repo string, branch string) bool {
-	for _, r := range *repos {
-		if r.Name == repo || r.Name == "*" {
-			if r.Branches == nil || len(*(r.Branches)) == 0 {
-				log.Print("Found " + r.Name + " repo")
-				return true
-			} else {
-				for _, b := range *(r.Branches) {
-					if b == branch {
-						log.Print("Found " + b + " branch in " + r.Name + " repo")
-						return true
-					}
-				}
-			}
-		}
-	}
-	return false
-}
-func (app *App) checkEventBranches(branches *([]EndpointConditionBranch), branch string, repo string) bool {
-	for _, b := range *branches {
-		if b.Name == branch || b.Name == "*" {
-			if b.Repositories == nil || len(*(b.Repositories)) == 0 {
-				log.Print("Found " + b.Name + " branch")
-				return true
-			} else {
-				for _, r := range *(b.Repositories) {
-					if r == repo {
-						log.Print("Found " + r + " repository in " + b.Name + " branch")
-						return true
-					}
-				}
-			}
-		}
-	}
-	return false
-}
-func (app *App) checkEventActions(actions *([]string), action string) bool {
-	for _, a := range *actions {
-		if a == action || a == "*" {
-			return true
-		}
-	}
-	return false
-}
-
-func (app *App) checkEndpointEvent(t *JenkinsTrigger, j map[string]interface{}, event string) error {
-	repo := app.github.GetRepository(j, event)
-	branch := app.github.GetBranch(j, event)
-
-	action := ""
-	if t.Events.PullRequest != nil && event == "pull_request" {
-		action = app.github.GetAction(j, event)
-		if action == "" {
-			return errors.New("action is empty")
-		}
-		inActions := app.checkEventActions(t.Events.PullRequest.Actions, action)
-		if !inActions {
-			return errors.New("Event " + event + "not supported")
-		}
-	}
-
-	var c *EndpointConditions
-	if event == "push" && t.Events.Push != nil {
-		c = t.Events.Push
-	} else if event == "pull_request" && t.Events.PullRequest != nil {
-		c = t.Events.PullRequest
-	} else if event == "create" && t.Events.Create != nil {
-		c = t.Events.Create
-	} else if event == "delete" && t.Events.Delete != nil {
-		c = t.Events.Delete
-	} else {
-		return errors.New("Event " + event + "not supported")
-	}
-
-	inRepos := false
-	if c.Repositories != nil {
-		inRepos = app.checkEventRepositories(c.Repositories, repo, branch)
-	}
-	inBranches := false
-	if c.Branches != nil && event == "push" {
-		inBranches = app.checkEventBranches(c.Branches, branch, repo)
-	}
-	inExcludeRepos := false
-	if c.ExcludeRepositories != nil {
-		inExcludeRepos = app.checkEventRepositories(c.ExcludeRepositories, repo, branch)
-	}
-	inExcludeBranches := false
-	if c.ExcludeBranches != nil && event == "push" {
-		inExcludeBranches = app.checkEventBranches(c.ExcludeBranches, branch, repo)
-	}
-	if (inRepos || inBranches) && !inExcludeRepos && !inExcludeBranches {
-		return nil
-	}
-
-	return errors.New("Event " + event + "not supported")
-}
-
-func (app *App) processJenkinsEndpoint(t *JenkinsTrigger, j map[string]interface{}, event string) error {
-	repo := app.github.GetRepository(j, event)
-	ref := app.github.GetRef(j, event)
-	if repo == "" {
-		return nil
-	}
-
-	if event == "push" {
-		if ref == "" {
-			return nil
-		}
-	}
-
-	branch := app.github.GetBranch(j, event)
-	if event == "push" {
-		if branch == "" {
-			return nil
-		}
-	}
-
-	endp := app.config.Jenkins.EndpointsMap[t.Endpoint]
-	if endp == nil {
-		return nil
-	}
-
-	err := app.checkEndpointEvent(t, j, event)
-	if err != nil {
-		return nil
-	}
-
-	rd, err := endp.GetRetryDelay()
-	if err != nil {
-		return nil
-	}
-	rc, err := endp.GetRetryCount()
-	if err != nil {
-		return nil
-	}
-
-	return app.processJenkinsEndpointRetries(endp, repo, branch, rd, rc)
-}
-
 func (app *App) printIteration(i int, rc int) {
 	log.Print("Retry: (" + strconv.Itoa(i+1) + "/" + strconv.Itoa(rc) + ")")
 }
 
 func (app *App) getCrumbAndSleep(u string, t string, rd int) (string, error) {
-	crumb, err := app.getCrumb(u, t)
+	crumb, err := app.jenkinsAPI.GetCrumb(app.config.Jenkins.BaseURL, u, t)
 	if err != nil {
 		log.Print("Error getting crumb")
 		time.Sleep(time.Second * time.Duration(rd))
@@ -287,22 +154,54 @@ func (app *App) processJenkinsEndpointRetries(endpointDef *JenkinsEndpoint, repo
 	return errors.New("Unable to post to endpoint " + endpointDef.Path)
 }
 
-func (app *App) getCrumb(user string, token string) (string, error) {
-	req, err := http.NewRequest("GET", app.config.Jenkins.BaseURL+"/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)", strings.NewReader(""))
-	if err != nil {
-		return "", err
+func (app *App) processPayloadOnJenkinsTrigger(jenkinstrigger *JenkinsTrigger, j map[string]interface{}, event string) error {
+	githubAPI := app.GetGitHubAPI()
+	config := app.GetConfig()
+
+	repo := githubAPI.GetRepository(j, event)
+	ref := githubAPI.GetRef(j, event)
+	branch := githubAPI.GetBranch(j, event)
+	action := ""
+	if jenkinstrigger.Events.PullRequest != nil && event == "pull_request" {
+		action = githubAPI.GetAction(j, event)
 	}
 
-	req.SetBasicAuth(app.config.Jenkins.User, app.config.Jenkins.Token)
-	c := &http.Client{}
-	resp, err := c.Do(req)
-	if err != nil {
-		return "", err
+	if repo == "" {
+		return nil
 	}
 
-	defer resp.Body.Close()
-	b, _ := ioutil.ReadAll(resp.Body)
-	return strings.Split(string(b), ":")[1], nil
+	if event == "push" {
+		if ref == "" {
+			return nil
+		}
+	}
+
+	if event == "push" {
+		if branch == "" {
+			return nil
+		}
+	}
+
+	endp := config.Jenkins.EndpointsMap[jenkinstrigger.Endpoint]
+	if endp == nil {
+		return nil
+	}
+
+	err := jenkinstrigger.CheckEvent(repo, branch, action, event)
+	if err != nil {
+		return nil
+	}
+
+	rd, err := endp.GetRetryDelay()
+	if err != nil {
+		return nil
+	}
+	rc, err := endp.GetRetryCount()
+	if err != nil {
+		return nil
+	}
+
+	return app.processJenkinsEndpointRetries(endp, repo, branch, rd, rc)
 }
 
 func (app *App) ProcessGitHubPayload(b *([]byte), event string) error {
@@ -314,7 +213,7 @@ func (app *App) ProcessGitHubPayload(b *([]byte), event string) error {
 
 	if app.config.Triggers.Jenkins != nil {
 		for _, t := range app.config.Triggers.Jenkins {
-			err := app.processJenkinsEndpoint(&t, j, event)
+			err = app.processPayloadOnJenkinsTrigger(&t, j, event)
 			if err != nil {
 				log.Print("Error processing endpoint " + t.Endpoint + ". Breaking.")
 				break
@@ -325,7 +224,7 @@ func (app *App) ProcessGitHubPayload(b *([]byte), event string) error {
 }
 
 func (app *App) ForwardGitHubPayload(b *([]byte), h http.Header) error {
-	githubHeaders := []string{"X-GitHub-Event", "X-Hub-Signature", "X-GitHub-Delivery", "content-type"}
+	githubHeaders := []string{"X-GitHubAPI-Event", "X-Hub-Signature", "X-GitHubAPI-Delivery", "content-type"}
 	if app.config.Forward != nil {
 		for _, f := range *(app.config.Forward) {
 			if f.URL != "" {
