@@ -1,9 +1,9 @@
 FROM golang:alpine AS builder
-LABEL maintainer="Mikolaj Gasior <miko@gen64.pl>"
+LABEL maintainer="Mikolaj Gasior <mg@f0x.pl>"
 
 RUN apk add --update git bash openssh make
 
-WORKDIR /go/src/github.com/gen64/github-webhookd
+WORKDIR /go/src/github.com/gasiordev/github-webhookd
 COPY . .
 RUN make tools
 RUN make build

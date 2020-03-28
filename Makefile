@@ -1,13 +1,9 @@
 VERSION?=$$(cat version.go | grep VERSION | cut -d"=" -f2 | sed 's/"//g' | sed 's/ //g')
 GOFMT_FILES?=$$(find . -name '*.go')
 PROJECT_BIN?=github-webhookd
-PROJECT_SRC?=github.com/gen64/github-webhookd
+PROJECT_SRC?=github.com/gasiordev/github-webhookd
 
 default: build
-
-tools:
-	GO111MODULE=off go get -u github.com/mikolajgasior/go-cli
-	GO111MODULE=off go get -u github.com/gorilla/mux
 
 guard-%:
 	@ if [ "${${*}}" = "" ]; then \
@@ -40,4 +36,4 @@ release: build
 
 .NOTPARALLEL:
 
-.PHONY: tools fmt build
+.PHONY: fmt build

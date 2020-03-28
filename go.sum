@@ -1,0 +1,4 @@
+github.com/gasiordev/go-cli v0.1.4 h1:ZwIn2McgPQQHdf5K7znJd7XZtO7YA272YXsnrWIwQak=
+github.com/gasiordev/go-cli v0.1.4/go.mod h1:VZ6BIiPQxdXRZ10tV9k9020p5zRWGh4jH+DWkEy2md0=
+github.com/gorilla/mux v1.7.4 h1:VuZ8uybHlWmqV03+zRzdwKL4tUnIp1MAQtp1mIFE1bc=
+github.com/gorilla/mux v1.7.4/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
