@@ -19,7 +19,7 @@ func NewCLI() *CLI {
 func (cli *CLI) Init(app *App) {
 	cli.app = app
 
-	cli.gocli = gocli.NewCLI("github-webhookd", "Tiny API to receive GitHub Webhooks and trigger Jenkins jobs", "Mikolaj Gasior <mg@gen64.pl>")
+	cli.gocli = gocli.NewCLI("github-webhookd", "Tiny API to receive GitHub Webhooks and trigger Jenkins jobs", "Nicholas Gasior <nicholas@gasior.dev>")
 
 	cmdStart := cli.gocli.AddCmd("start", "Starts API", cli.startHandler)
 	cmdStart.AddFlag("config", "Config file", gocli.CLIFlagTypePathFile|gocli.CLIFlagMustExist|gocli.CLIFlagRequired)
